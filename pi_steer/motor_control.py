@@ -57,16 +57,17 @@ class MotorControl():
         pwm = delta_angle * self.settings.settings['gainP'] * ANGLE_GAIN
         if pwm < 0:
             pwm = -pwm
-            self.pwm.direction = 0
+            direction = 0
         else:
-            self.pwm.direction = 1
+            direction = 1
         if pwm > self.settings.settings['highPWM'] / 2.55:
             pwm = self.settings.settings['highPWM'] / 2.55
         if pwm < self.settings.settings['minPWM'] / 2.55:
             pwm = self.settings.settings['minPWM'] / 2.55
-        if self.pwm.pwm_value != pwm:
+        if self.pwm.pwm_value != pwm or direction != self.pwm.direction:
             self.value_changed = True
             self.pwm.pwm_value = pwm
+            self.pwm.direction = direction
 
     def set_control(self, auto_steer_data):
         # auto_steer_data['Speed']
