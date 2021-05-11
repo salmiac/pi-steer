@@ -110,25 +110,30 @@ pgn_data = {
 }
 
 def decode_data(data):
-    source = data[2]
-    pgn = data[3]
-    length = data[4]
-    crc = data[5+length]
-    crc_sum = 0
-    for byte in data[2:length+5]:
-        crc_sum += byte
-    crc_sum %= 256
+    try:
+        source = data[2]
+        pgn = data[3]
+        length = data[4]
+        crc = data[5+length]
+        crc_sum = 0
+        for byte in data[2:length+5]:
+            crc_sum += byte
+        crc_sum %= 256
 
-    crc_text = 'CRC failed.'
-    crc_ok = False
-    if crc == crc_sum:
-        crc_text = 'CRC Ok.'
-        crc_ok = True
-    
-    payload = pgn_data[pgn](data[5:length+5])
-    payload_text = '| Payload:'
-    for key in payload.keys():
-        payload_text += ' ' + key + ' : ' + str(payload[key])
+        crc_text = 'CRC failed.'
+        crc_ok = False
+        if crc == crc_sum:
+            crc_text = 'CRC Ok.'
+            crc_ok = True
+        else:
+            return (None, None)
+        
+        payload = pgn_data[pgn](data[5:length+5])
+        payload_text = '| Payload:'
+        for key in payload.keys():
+            payload_text += ' ' + key + ' : ' + str(payload[key])
+    except KeyError:
+        return (None, None)
 
     print(
         'From:', source_text[source], 
@@ -163,6 +168,8 @@ class AgIO():
             return (None, None)
         else:
             print(read, address)
+            if len(read) < 6:
+                return (None, None)
             if read[0] == 0x80 and read[1] == 0x81:
                 return decode_data(read)
 

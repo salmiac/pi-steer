@@ -2,7 +2,7 @@ import pi_steer.pwm
 import pi_steer.automation_hat as hat
 import json
 
-ANGLE_GAIN = 0.1 # 10 degrees = full power * gain %
+ANGLE_GAIN = 1 # 10 degrees = full power * gain %
 
 def get_switch():
     if hat.input1():
