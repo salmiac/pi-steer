@@ -5,11 +5,12 @@ import pi_steer.imu
 import pi_steer.agio
 import pi_steer.settings
 import pi_steer.motor_control
-from pi_steer import was
+import pi_steer.was
 
 def main():
     imu = pi_steer.imu.IMU()
     settings = pi_steer.settings.Settings()
+    was = pi_steer.was.WAS(settings)
     agio = pi_steer.agio.AgIO(settings)
     motor_control = pi_steer.motor_control.MotorControl(settings)
 
@@ -29,6 +30,7 @@ def main():
         switch = motor_control.switch
         pwm_display = motor_control.pwm_display()
         heading = 0 # Disable heading
+        roll = 0
         agio.from_autosteer(wheel_angle, heading, roll, switch, pwm_display)
 
         time.sleep(0.01)
