@@ -29,8 +29,8 @@ def main():
         agio.alive()
         switch = motor_control.switch
         pwm_display = motor_control.pwm_display()
-        heading = 0 # Disable heading
-        roll = 0
+        # heading = 0 # Disable heading
+        # roll = 0
         agio.from_autosteer(wheel_angle, heading, roll, switch, pwm_display)
 
         time.sleep(0.01)
