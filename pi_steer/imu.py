@@ -10,6 +10,9 @@ import binascii
 import json
 import pi_steer.automation_hat as hat
 
+ROLL_FILTER_WINDOW_SIZE = 1800 * 100
+HEADING_FILTER_WINDOW_SIZE = 10
+
 class IMU():
     def __init__(self):
         # Use these lines for I2C
@@ -25,6 +28,28 @@ class IMU():
         print("Linear acceleration (m/s^2): {}".format(self.imu.linear_acceleration))
         print("Gravity (m/s^2): {}".format(self.imu.gravity))
         print("Analog1: {}".format(hat.analog1()))
+
+        self.heading = 0
+        self.roll = 0
+        self.headings = []
+        self.rolls = []
+        self.heading_sum = 0
+        self.roll_sum = 0
     
-    def euler(self):
-        return self.imu.euler
+    def get_heading_and_roll(self):
+        (heading, roll, yawn) = self.imu.euler
+        if heading is not None and heading >= 0 and heading <= 360:
+            self.headings.append(heading)
+            self.heading_sum += heading
+            if len(self.headings) > HEADING_FILTER_WINDOW_SIZE:
+                self.heading_sum -= self.headings[0]
+                del self.headings[0]
+            self.heading = self.heading_sum / len(self.headings)
+        if roll is not None and roll >= -90 and roll <= 90:
+            self.rolls.append(roll)
+            self.roll_sum += roll
+            if len(self.rolls) > ROLL_FILTER_WINDOW_SIZE:
+                self.roll_sum -= self.rolls[0]
+                del self.rolls[0]
+            self.roll = self.roll_sum / len(self.rolls)
+        return self.heading, self.roll

@@ -14,13 +14,8 @@ def main():
     motor_control = pi_steer.motor_control.MotorControl(settings)
 
     while True:
-        (heading, roll, yawn) = imu.euler()
+        (heading, roll) = imu.get_heading_and_roll()
         wheel_angle = was.angle()
-
-        if heading is None or roll is None or yawn is None:
-            motor_control.update_motor(wheel_angle)
-            continue
-        # print('Euler: ', heading, roll, yawn)
 
         (pgn, payload) = agio.read()
         if pgn is not None:
