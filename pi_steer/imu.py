@@ -1,4 +1,5 @@
 import time
+import math
 import board
 import busio
 import adafruit_bno055
@@ -31,25 +32,36 @@ class IMU():
 
         self.heading = 0
         self.roll = 0
-        self.headings = []
+        self.headingsx = []
+        self.headingsy = []
         self.rolls = []
-        self.heading_sum = 0
+        self.headingx_sum = 0
+        self.headingy_sum = 0
         self.roll_sum = 0
     
     def get_heading_and_roll(self):
         (heading, roll, yawn) = self.imu.euler
         if heading is not None and heading >= 0 and heading <= 360:
-            self.headings.append(heading)
-            self.heading_sum += heading
-            if len(self.headings) > HEADING_FILTER_WINDOW_SIZE:
-                self.heading_sum -= self.headings[0]
-                del self.headings[0]
-            self.heading = self.heading_sum / len(self.headings)
+            heading_rad = math.radians(heading)
+            headingx = math.sin(heading_rad)
+            headingy = math.cos(heading_rad)
+            self.headingsx.append(headingx)
+            self.headingsy.append(headingy)
+            self.headingx_sum += headingx
+            self.headingy_sum += headingy
+            if len(self.headingsx) > HEADING_FILTER_WINDOW_SIZE:
+                self.headingx_sum -= self.headingsx[0]
+                self.headingy_sum -= self.headingsy[0]
+                del self.headingsx[0]
+                del self.headingsy[0]
+            self.heading = math.degrees(math.atan2(self.headingx_sum, self.headingy_sum))
+            if self.heading < 0:
+                self.heading += 360
         if roll is not None and roll >= -90 and roll <= 90:
             self.rolls.append(roll)
             self.roll_sum += roll
             if len(self.rolls) > ROLL_FILTER_WINDOW_SIZE:
                 self.roll_sum -= self.rolls[0]
                 del self.rolls[0]
-            self.roll = self.roll_sum / len(self.rolls)
+            self.roll = roll - self.roll_sum / len(self.rolls)
         return self.heading, self.roll

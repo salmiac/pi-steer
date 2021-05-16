@@ -16,6 +16,7 @@ def main():
 
     while True:
         (heading, roll) = imu.get_heading_and_roll()
+        print('\r H {: = 7.2f} R {: = 7.2f}'.format(heading, roll), end='')
         wheel_angle = was.angle()
 
         (pgn, payload) = agio.read()

@@ -26,7 +26,7 @@ Automation HAT Connections
 |output|3-C|
 
 ## Adafruit BNO055 Absolute Orientation Sensor
-Why this instead of BNO085? It was available.
+Why this instead of BNO085 or CMPS14? It was available, don't use it.
 
 Wires soldered to raspberry Pi - Automation HAT pins.
 |GPIO|Pi pin number|BNO055|

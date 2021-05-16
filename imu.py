@@ -24,8 +24,6 @@ class IMU():
         self.missed_values = 0
         self.tic = time.time()
         self.heading = 0
-        self.roll_sum
-        self.roll_count
 
     def read_all(self):
         """
