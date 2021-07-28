@@ -1,73 +1,66 @@
-import pi_steer.pwm
-import pi_steer.automation_hat as hat
-import json
+import pi_steer.cytron_md13s as pwm
+import gpiozero
 
 ANGLE_GAIN = 1 # 10 degrees = full power * gain %
 
-def get_switch():
-    if hat.input1():
-        switch = 0x00
-        hat.output3(True)
-    else:
-        switch = 0xff
-        hat.output3(False)
-    return switch
-
 class MotorControl(): 
     def __init__(self, settings):
-        self.pwm = pi_steer.pwm.PWM()
         self.settings = settings
         self.running = False
         self.value_changed = True
         self.direction = 1 # 1 = right, 0 = left
-        self.switch = 0xff
         self.target_angle = 0
         self.ok_to_run = False
+        self.switch = gpiozero.DigitalInputDevice('BOARD13', pull_up=True, active_state=None, bounce_time=None)
+        self.active_led = gpiozero.DigitalOutputDevice('BOARD15', active_high=False, initial_value=False)
+        self.direction_led = gpiozero.DigitalOutputDevice('BOARD24', active_high=False, initial_value=False)
+        self.pwm_value = 0
+
+    def calculate_pwm(self, wheel_angle):
+        delta_angle = self.target_angle - wheel_angle
+        pwm_value = delta_angle * self.settings.settings['gainP'] * ANGLE_GAIN
+        if pwm_value < 0:
+            pwm_value = -pwm_value
+            direction = 0
+        else:
+            direction = 1
+        if pwm_value > self.settings.settings['highPWM'] / 2.55:
+            pwm_value = self.settings.settings['highPWM'] / 2.55
+        if pwm_value < self.settings.settings['minPWM'] / 2.55:
+            pwm_value = self.settings.settings['minPWM'] / 2.55
+        if self.pwm_value != pwm_value or direction != self.direction:
+            self.value_changed = True
+            self.pwm_value = pwm_value
+            self.direction = direction
 
     def update_motor(self, wheel_angle):
-        self.switch = get_switch() 
+        self.active_led.value = self.switch.value
         start = False
         stop = False
 
-        if self.switch == 0x00 and not self.running and self.ok_to_run:
+        if self.switch.value and not self.running and self.ok_to_run:
             start = True
-        if self.running and (self.switch == 0xff or not self.ok_to_run):
+        if self.running and (not self.switch.value or not self.ok_to_run):
             stop = True
 
         if self.running or start:
             self.calculate_pwm(wheel_angle)
         if stop:
             print('Stop!')
-            self.pwm.stop()
-            self.pwm.pwm_value = 0
+            pwm.stop()
+            self.pwm_value = 0
             self.running = False
-            return
+            return (self.switch.value, self.pwm_value)
         if self.value_changed:
             self.value_changed = False
-            print('Set: pwm:', self.pwm.pwm_value, ', switch: ', self.switch, ', direction:', self.pwm.direction, ', wheel angle:', wheel_angle)
-            self.pwm.update()
-            return
+            # print('Set: pwm:', self.pwm_value, ', switch: ', self.switch.value, ', direction:', self.direction, ', wheel angle:', wheel_angle)
+            pwm.update(self.pwm_value, self.direction)
+            self.direction_led.value = self.direction
         if start:
             print('Start!')
-            self.pwm.start()
+            pwm.start()
             self.running = True
-
-    def calculate_pwm(self, wheel_angle):
-        delta_angle = self.target_angle - wheel_angle
-        pwm = delta_angle * self.settings.settings['gainP'] * ANGLE_GAIN
-        if pwm < 0:
-            pwm = -pwm
-            direction = 0
-        else:
-            direction = 1
-        if pwm > self.settings.settings['highPWM'] / 2.55:
-            pwm = self.settings.settings['highPWM'] / 2.55
-        if pwm < self.settings.settings['minPWM'] / 2.55:
-            pwm = self.settings.settings['minPWM'] / 2.55
-        if self.pwm.pwm_value != pwm or direction != self.pwm.direction:
-            self.value_changed = True
-            self.pwm.pwm_value = pwm
-            self.pwm.direction = direction
+        return (self.switch.value, self.pwm_value)
 
     def set_control(self, auto_steer_data):
         # auto_steer_data['Speed']
@@ -82,4 +75,4 @@ class MotorControl():
             self.ok_to_run = False
 
     def pwm_display(self):
-        return int(self.pwm.pwm_value * 2.55)
+        return int(self.pwm_value * 2.55)

@@ -135,12 +135,13 @@ def decode_data(data):
     except KeyError:
         return (None, None)
 
-    print(
-        'From:', source_text[source], 
-        '| PGN:', pgn_text[pgn],
-        payload_text,
-        '| ', crc_text
-    )
+    if pgn not in [0xfe]:
+        print(
+            'From:', source_text[source], 
+            '| PGN:', pgn_text[pgn],
+            payload_text,
+            '| ', crc_text
+        )
 
     if crc_ok:
         return (pgn, payload)
@@ -167,7 +168,7 @@ class AgIO():
         except socket.error:
             return (None, None)
         else:
-            print(read, address)
+            # print(read, address)
             if len(read) < 6:
                 return (None, None)
             if read[0] == 0x80 and read[1] == 0x81:

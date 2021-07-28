@@ -1,2 +1,1 @@
-adafruit-circuitpython-bno055
-python3-automationhat
+adafruit-circuitpython-bno085
