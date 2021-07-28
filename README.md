@@ -33,7 +33,7 @@ enable i2C interface
 |BNO085|GND|Ground|9|10|GPIO 15|||
 |BNO085|RST|GPIO 17|11|12|GPIO 18|||
 |Autosteer switch|A|GPIO 27|13|14|Ground|GND|ADS1115|
-|Autosteer activated LED|-|GPIO 22|15|16|GPIO 23|-|LED ??|
+|Autosteer activated LED|-|GPIO 22|15|16|GPIO 23|-|Program activity LED|
 |LED:s|+|3v3 Power|17|18|GPIO 24|||
 |||GPIO 10|19|20|Ground|-|Power LED|
 |||GPIO 9|21|22|GPIO 25|DIR|Cytron|
@@ -116,7 +116,7 @@ Leds are connected between 3.3 V power (pin 17) and control pins
 |--|--|--|
 |GPIO 22|15|Autosteer activated|
 |GPIO 8|24|Motor direction|
-|GPIO 23|16|??|
+|GPIO 23|16|Program activity|
 |Ground|20|Power on|
 
 ## Section control
