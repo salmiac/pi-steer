@@ -130,5 +130,6 @@ class BNO085():
             if heading < 0:
                 heading += 360
             heading = 360 - heading
+            heading = 0
 
             return (heading, roll, pitch)

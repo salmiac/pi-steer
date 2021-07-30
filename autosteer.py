@@ -25,9 +25,9 @@ def main():
         (switch, pwm) = motor_control.update_motor(was.angle)
         # agio.alive()
         if switch:
-            switch = 0xff
-        else:
             switch = 0x00
+        else:
+            switch = 0xff
         pwm_display = int(pwm * 2.55)
         # heading = 0 # Disable heading
         # roll = 0
