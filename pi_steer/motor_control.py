@@ -38,9 +38,9 @@ class MotorControl():
         start = False
         stop = False
 
-        if self.switch.value and not self.running and self.ok_to_run:
+        if self.switch.value == 1 and not self.running and self.ok_to_run:
             start = True
-        if self.running and (not self.switch.value or not self.ok_to_run):
+        if self.running and (self.switch.value == 0 or not self.ok_to_run):
             stop = True
 
         if self.running or start:

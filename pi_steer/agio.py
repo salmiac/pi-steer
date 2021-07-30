@@ -135,7 +135,7 @@ def decode_data(data):
     except KeyError:
         return (None, None)
 
-    if pgn not in [0xfe]:
+    if pgn not in [0xfe, 0xef]:
         print(
             'From:', source_text[source], 
             '| PGN:', pgn_text[pgn],
