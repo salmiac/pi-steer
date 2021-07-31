@@ -35,14 +35,20 @@ FEATURES = [
 
 reset = DigitalOutputDevice('BOARD11', active_high=False, initial_value=True)
 
+def now():
+    return time.strftime('%X')
+
 def enable_features(bno):
     for feature in FEATURES:
         try:
             bno.enable_feature(feature)
         except Exception as err:
-            print('BNO085 feature failed:', err)
+            print(now(), 'BNO085 feature failed:', err)
+            return False
+    return True
 
 def hard_reset():
+    print(now(), 'BNO085 Hard reset')
     reset.on()
     time.sleep(0.1)
     reset.off()
@@ -51,67 +57,99 @@ def hard_reset():
 def init(i2c):
     while True:
         try:
+            print(now(), 'BNO085 try I2C address 0x4a')
             bno = BNO08X_I2C(i2c, address=0x4a)
         except:
             try:
+                print(now(), 'BNO085 try I2C address 0x4b')
                 bno = BNO08X_I2C(i2c, address=0x4b)
             except:
-                print('BNO085 failed')
+                print(now(), 'BNO085 failed')
                 time.sleep(1)
                 hard_reset()
-                time.sleep
+                continue
 
         try:
-            bno.hard_reset()
             bno.initialize()
-            bno.begin_calibration()
-            while True:
-                if bno.calibration_status >= 2:
-                    break
-                time.sleep(0.1)
-        except Exception as err:
-            print('BNO085 initialization failed:', err)
-            return None
+        except:
+            print(now(), 'First initialization failed, try software hard reset:')
+            try:
+                bno.hard_reset()
+                bno.initialize()
+            except Exception as err:
+                print(now(), 'BNO085 initialization failed:', err)
+                return None
 
+        print(now(), 'BNO085 initialized.')
         return bno
 
 def start():
-    print('Init BNO085')
-    try:
-        i2c = I2C(SCL, SDA, frequency=400000)
-    except Exception as err:
-        print('I2C failed', err)
-        return None
-
-    bno = init(i2c)
-    if not bno:
-        return None
-    enable_features(bno)
-
-    return bno
+    print(now(), 'Init BNO085')
+    while True:
+        try:
+            i2c = I2C(SCL, SDA, frequency=400000)
+        except Exception as err:
+            print(now(), 'I2C failed', err)
+            return None
+        time.sleep(0.2)
+        bno = init(i2c)
+        if not bno:
+            hard_reset()
+            continue
+        if not enable_features(bno):
+            hard_reset()
+            continue
+        return bno
 
 class BNO085():
     def __init__(self) -> None:
         self.bno = start()
+        self.last_heading = None
 
     def read(self):
+        read_counter = 0
+        reset_counter = 0
+        value_counter = 0
+        heading_counter = 0
         while True:
+            if read_counter:
+                print(now(), 'BNO085 Read retry: ', read_counter)
+            if reset_counter:
+                print(now(), 'BNO085 Reset retry: ', reset_counter)
+            if value_counter:
+                print(now(), 'BNO085 value error: ', value_counter)
+            if heading_counter:
+                print(now(), 'BNO085 heading retry: ', heading_counter)
+            if self.bno is None:
+                time.sleep(1)
+                self.bno = start()
+                continue
+            read_counter += 1
             try:
                 (qx, qy, qz, qw) = self.bno.quaternion
             except:
                 time.sleep(0.01)
-                try:
-                    (qx, qy, qz, qw) = self.bno.quaternion
-                except:
-                    self.bno.soft_reset()
-                    time.sleep(0.1)
+                if read_counter < 10:
+                    continue
+
+                read_counter = 0
+                reset_counter += 1
+
+                if reset_counter < 3:
+                    print(now(), 'BNO085 try soft reset\n')
                     try:
-                        (qx, qy, qz, qw) = self.bno.quaternion
-                    except Exception as err:
-                        print(err)
-                        time.sleep(1)
-                        self.bno = start()
-                        continue
+                        self.bno.soft_reset()
+                        print(now(), 'BNO085 soft reset done\n')
+                    except:
+                        print(now(), 'Soft reset failed\n')
+                    self.bno = None
+                    continue
+                hard_reset()
+                self.bno = None
+                time.sleep(0.5)
+                continue
+            read_counter = 0
+            reset_counter = 0
             sinr_cosp = 2 * (qw * qx + qy * qz)
             cosr_cosp = 1 - 2 * (qx * qx + qy * qy)
             roll = degrees(atan2(sinr_cosp, cosr_cosp))
@@ -120,8 +158,10 @@ class BNO085():
             try:
                 pitch = asin(sinp)
             except ValueError:
+                value_counter += 1
                 time.sleep(0.01)
                 continue
+            value_counter = 0
             pitch = degrees(pitch)
 
             siny_cosp = 2 * (qw * qz + qx * qy)
@@ -130,6 +170,12 @@ class BNO085():
             if heading < 0:
                 heading += 360
             heading = 360 - heading
-            heading = 0
+            if self.last_heading is not None and abs(self.last_heading - heading) > 30 and heading_counter < 3:
+                heading_counter += 1
+                time.sleep(0.1)
+                continue
+            heading_counter = 0
+            self.last_heading = heading
+            # heading = 0
 
             return (heading, roll, pitch)

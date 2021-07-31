@@ -14,7 +14,11 @@ def reader():
 
     while True:
         tic = time.time()
-        (heading, roll, pitch) = bno.read()
+        try:
+            (heading, roll, pitch) = bno.read()
+        except Exception as err:
+            # pass
+            print('IMU read failed', err)
         # print('Imu read took: ', time.time()-tic, 's.')
         time.sleep(0.1)
 
