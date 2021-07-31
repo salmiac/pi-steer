@@ -10,7 +10,7 @@ from adafruit_bno08x import (
     # BNO_REPORT_LINEAR_ACCELERATION,
     BNO_REPORT_ROTATION_VECTOR,
     # BNO_REPORT_GAME_ROTATION_VECTOR,
-    BNO_REPORT_GEOMAGNETIC_ROTATION_VECTOR, 
+    # BNO_REPORT_GEOMAGNETIC_ROTATION_VECTOR, 
     # BNO_REPORT_STEP_COUNTER,
     # BNO_REPORT_RAW_ACCELEROMETER,
     # BNO_REPORT_RAW_GYROSCOPE,
@@ -30,7 +30,7 @@ from adafruit_bno08x.i2c import BNO08X_I2C
 
 FEATURES = [
     BNO_REPORT_ROTATION_VECTOR,
-    BNO_REPORT_GEOMAGNETIC_ROTATION_VECTOR, 
+    # BNO_REPORT_GEOMAGNETIC_ROTATION_VECTOR, 
     ]
 
 reset = DigitalOutputDevice('BOARD11', active_high=False, initial_value=True)
@@ -128,7 +128,7 @@ class BNO085():
             try:
                 (qx, qy, qz, qw) = self.bno.quaternion
             except:
-                time.sleep(0.01)
+                time.sleep(0.02)
                 if read_counter < 10:
                     continue
 
@@ -159,6 +159,7 @@ class BNO085():
                 pitch = asin(sinp)
             except ValueError:
                 value_counter += 1
+                print(now(), 'Value error:', qx, qy, qz, qw )
                 time.sleep(0.01)
                 continue
             value_counter = 0
