@@ -1,4 +1,5 @@
 import time
+import signal
 from gpiozero import DigitalOutputDevice
 from math import atan2, asin, pi, degrees
 from board import SCL, SDA
@@ -34,6 +35,11 @@ FEATURES = [
     ]
 
 reset = DigitalOutputDevice('BOARD11', active_high=False, initial_value=True)
+
+def timeout(signum, frame):
+    raise Exception('Timeout')
+
+signal.signal(signal.SIGALRM, timeout)
 
 def now():
     return time.strftime('%X')
@@ -125,11 +131,13 @@ class BNO085():
                 self.bno = start()
                 continue
             read_counter += 1
+            signal.alarm(1)
             try:
                 (qx, qy, qz, qw) = self.bno.quaternion
             except:
+                signal.alarm(0)
                 time.sleep(0.02)
-                if read_counter < 10:
+                if read_counter < 3:
                     continue
 
                 read_counter = 0
@@ -148,6 +156,8 @@ class BNO085():
                 self.bno = None
                 time.sleep(0.5)
                 continue
+            signal.alarm(0)
+
             read_counter = 0
             reset_counter = 0
             sinr_cosp = 2 * (qw * qx + qy * qz)
