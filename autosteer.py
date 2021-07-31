@@ -17,8 +17,11 @@ def main():
         # print('\r H {: = 7.2f} R {: = 7.2f}'.format(imu.heading, imu.roll), end='')
         (pgn, payload) = agio.read()
         if pgn is not None:
+            if pgn == 0xfb:
+                settings.settings.update(payload)
+                settings.save_settings()
             if pgn == 0xfc:
-                settings.settings = payload
+                settings.settings.update(payload)
                 settings.save_settings()
             if pgn == 0xfe:
                 motor_control.set_control(payload)

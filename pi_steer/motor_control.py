@@ -21,9 +21,9 @@ class MotorControl():
         pwm_value = delta_angle * self.settings.settings['gainP'] * ANGLE_GAIN
         if pwm_value < 0:
             pwm_value = -pwm_value
-            direction = 0
+            direction = 1 if self.settings.settings['invertSteer'] else 0
         else:
-            direction = 1
+            direction = 0 if self.settings.settings['invertSteer'] else 1
         if pwm_value > self.settings.settings['highPWM'] / 2.55:
             pwm_value = self.settings.settings['highPWM'] / 2.55
         if pwm_value < self.settings.settings['minPWM'] / 2.55:

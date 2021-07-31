@@ -9,7 +9,17 @@ class Settings():
             'minPWM': 25,
             'countsPerDeg': 100,
             'steerOffset': 0,
-            'ackermanFix': 128
+            'ackermanFix': 128,
+            'invertWas': 0,
+            'steerInvertRelays': 0,
+            'invertSteer': 0,
+            'conv': 'Single',
+            'motorDrive': 'Cytron',
+            'steerEnable': 'Switch',
+            'encoder': 0,
+            'danfoss': 0,
+            'pressureSensor': 0,
+            'currentSensor': 0,
         }
 
         try:

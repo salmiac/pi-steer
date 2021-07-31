@@ -78,9 +78,19 @@ pgn_data = {
     0xfb: # steerConfig
     lambda data: { 
         'set0': data[0],
+        'invertWas': data[0] & 1,
+        'steerInvertRelays': data[0] >> 1 & 1,
+        'invertSteer': data[0] >> 2 & 1,
+        'conv': 'Single' if data[0] >> 3 & 1 else 'Differential',
+        'motorDrive': 'Cytron' if data[0] >> 4 & 1 else 'IBT2',
+        'steerEnable': 'Switch' if data[0] >> 5 & 1 else ('Button' if data[0] >> 6 & 1 else 'None'),
+        'encoder': data[0] >> 7 & 1,
         'pulseCount': data[1],
         'minSpeed': data[2],
         'sett1': data[3],
+        'danfoss': data[3] & 1,
+        'pressureSensor': data[3] >> 1 & 1,
+        'currentSensor': data[3] >> 2 & 1,
     },
     0xfc: # steerSettings
     lambda data: { 

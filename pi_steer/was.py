@@ -16,5 +16,8 @@ class WAS():
             # tic = time.time()
             voltage = ads.read()
             # print('Imu read took: ', time.time()-tic, 's.')
-            self.angle = -((voltage - 2.5) / 2.0 * 60.0 * self.settings.settings['countsPerDeg'] / 100.0 + self.settings.settings['steerOffset'])
+            angle = ((voltage - 2.5) / 2.0 * 60.0 * self.settings.settings['countsPerDeg'] / 100.0 + self.settings.settings['steerOffset'])
+            if self.settings.settings['invertWas']:
+                angle = -angle
+            self.angle = angle
             time.sleep(0.01)
