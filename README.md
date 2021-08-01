@@ -23,6 +23,8 @@ enable i2C interface
 
 `sudo raspi-config`
 
+edit `/boot/config.txt` Add the line `dtoverlay=pwm-2chan` Save the file and reboot.
+
 ## Raspberry Pi pinout
 |Device|pin|Pi GPIO|Pi pin|Pi pin|Pi GPIO|pin|Device|
 |--|--|--|--|--|--|--|--|
@@ -46,8 +48,6 @@ enable i2C interface
 |||GPIO 19|35|36|GPIO 16|||
 |||GPIO 20|37|38|GPIO 20|||
 |RTY120LVNAA|GND|Ground|39|40|GPIO 21|||
-
-
 
 ## Wheel angle sensor **RTY120LVNAA**
 |Function|pin|
