@@ -5,6 +5,7 @@ def write(file, command):
         with open(file, 'w') as newport:
             newport.write(command)
     except:
+        print('Can not write to ', file)
         return False
     return True
 
