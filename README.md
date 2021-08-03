@@ -23,7 +23,7 @@ enable i2C interface
 
 `sudo raspi-config`
 
-edit `/boot/config.txt` Add the line `dtoverlay=pwm-2chan` Save the file and reboot.
+edit `/boot/config.txt` Add the line `dtoverlay=pwm-2chan,pin=12,func=4,pin2=13,func2=4` Save the file and reboot.
 
 ## Raspberry Pi pinout
 |Device|pin|Pi GPIO|Pi pin|Pi pin|Pi GPIO|pin|Device|
@@ -91,7 +91,7 @@ Set hardware PWM on Raspberry Pi 3
 https://blog.oddbit.com/post/2017-09-26-some-notes-on-pwm-on-the-raspb/
 
 edit `/boot/config.txt`
-Add the line `dtoverlay=pwm-2chan`
+Add the line `dtoverlay=pwm-2chan,pin=12,func=4,pin2=13,func2=4`
 Save the file and reboot.
 
 Motor controller wiring

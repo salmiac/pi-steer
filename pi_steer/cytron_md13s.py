@@ -1,22 +1,31 @@
+import time
+
 FREQUENCY = 20000
 
 def write(file, command):
     try:
         with open(file, 'w') as newport:
             newport.write(command)
-    except:
-        print('Can not write to ', file)
+    except Exception as err:
+        print('Can not write to ', file, err)
         return False
     return True
 
 write('/sys/class/pwm/pwmchip0/export', '0')
+time.sleep(1)
 write('/sys/class/pwm/pwmchip0/pwm0/period', str(int(1000000000/FREQUENCY)) )
+time.sleep(0.1)
 write('/sys/class/pwm/pwmchip0/pwm0/duty_cycle', '0')
+time.sleep(0.001)
 write('/sys/class/pwm/pwmchip0/pwm0/enable', '0')
+time.sleep(0.001)
 
 write('/sys/class/gpio/export', '25')
+time.sleep(0.001)
 write('/sys/class/gpio/gpio25/direction', 'out')
+time.sleep(0.001)
 write('/sys/class/gpio/gpio25/value', '0')
+time.sleep(0.001)
 
 def start():
     write('/sys/class/pwm/pwmchip0/pwm0/enable', '1')

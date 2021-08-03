@@ -131,11 +131,11 @@ class BNO085():
                 self.bno = start()
                 continue
             read_counter += 1
-            signal.alarm(1)
+            # signal.alarm(1)
             try:
                 (qx, qy, qz, qw) = self.bno.quaternion
             except:
-                signal.alarm(0)
+                # signal.alarm(0)
                 time.sleep(0.02)
                 if read_counter < 3:
                     continue
@@ -156,7 +156,7 @@ class BNO085():
                 self.bno = None
                 time.sleep(0.5)
                 continue
-            signal.alarm(0)
+            # signal.alarm(0)
 
             read_counter = 0
             reset_counter = 0
