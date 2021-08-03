@@ -24,7 +24,7 @@ class Settings():
 
         try:
             with open('settings.json') as json_file:
-                self.settings = json.load(json_file)
+                self.settings.update(json.load(json_file))
         except FileNotFoundError:
             self.save_settings()
 
