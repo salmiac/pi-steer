@@ -39,7 +39,7 @@ def main():
         heading = imu.heading # 0 # Disable heading
         # roll = 0
         agio.from_autosteer(was.angle, heading, imu.roll, switch, motor_control.pwm_display())
-        time.sleep(0.01)
+        time.sleep(0.02)
 
 if __name__ == '__main__':
     try:

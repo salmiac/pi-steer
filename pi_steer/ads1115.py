@@ -31,7 +31,7 @@ class ADS1115():
                 chan = AnalogIn(self.ads, ADS.P0)
             except Exception as err:
                 print('ADS1115 Read failed', err)
-                time.sleep(0.1)
+                time.sleep(0.01)
                 self.ads = init()
                 continue
         

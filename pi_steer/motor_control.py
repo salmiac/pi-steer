@@ -22,6 +22,7 @@ class MotorControl():
         threading.Thread(target=self.update_motor).start()
 
     def calculate_pwm(self):
+        self.was.read()
         delta_angle = self.target_angle - self.was.angle
         pwm_value = delta_angle * self.settings.settings['gainP'] * ANGLE_GAIN
         if pwm_value < 0:
@@ -68,7 +69,7 @@ class MotorControl():
                 print('Start!')
                 pwm.start()
                 self.running = True
-            time.sleep(0.001)
+            time.sleep(0.02)
 
     def set_control(self, auto_steer_data):
         # auto_steer_data['Speed']
