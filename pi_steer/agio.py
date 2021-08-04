@@ -166,7 +166,7 @@ class AgIO():
         self.server=socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.server.bind(('', 8888))
-        self.client.settimeout(2)
+        self.server.settimeout(2)
         # self.server.setblocking(0)
 
         self.client=socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
