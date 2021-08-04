@@ -6,6 +6,7 @@ from adafruit_ads1x15.analog_in import AnalogIn
 from adafruit_ads1x15.ads1x15 import Mode
 
 def init():
+    print('Init ADS1115')
     try:
         i2c = I2C(SCL, SDA, frequency=400000)
     except Exception as err:
@@ -28,7 +29,8 @@ class ADS1115():
         while True:
             try:
                 chan = AnalogIn(self.ads, ADS.P0)
-            except:
+            except Exception as err:
+                print('ADS1115 Read failed', err)
                 time.sleep(0.1)
                 self.ads = init()
                 continue

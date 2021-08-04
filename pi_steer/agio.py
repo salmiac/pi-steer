@@ -166,7 +166,8 @@ class AgIO():
         self.server=socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.server.bind(('', 8888))
-        self.server.setblocking(0)
+        self.client.settimeout(2)
+        # self.server.setblocking(0)
 
         self.client=socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -175,7 +176,8 @@ class AgIO():
     def read(self):
         try:
             (read, address)=self.server.recvfrom(1024)
-        except socket.error:
+        except (socket.error, socket.timeout) as err:
+            print('Read error', err)
             return (None, None)
         else:
             # print(read, address)

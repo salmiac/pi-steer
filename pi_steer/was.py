@@ -20,4 +20,4 @@ class WAS():
             if self.settings.settings['invertWas']:
                 angle = -angle
             self.angle = angle
-            time.sleep(0.01)
+            time.sleep(0.001)
