@@ -21,9 +21,9 @@ write('/sys/class/pwm/pwmchip0/pwm0/enable', '0')
 time.sleep(0.001)
 
 write('/sys/class/gpio/export', '25')
-time.sleep(0.001)
+time.sleep(1)
 write('/sys/class/gpio/gpio25/direction', 'out')
-time.sleep(0.001)
+time.sleep(0.1)
 write('/sys/class/gpio/gpio25/value', '0')
 time.sleep(0.001)
 

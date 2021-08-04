@@ -18,6 +18,7 @@ class MotorControl():
         self.active_led = gpiozero.DigitalOutputDevice('BOARD15', active_high=False, initial_value=False)
         self.direction_led = gpiozero.DigitalOutputDevice('BOARD24', active_high=False, initial_value=False)
         self.pwm_value = 0
+        self.moe = 0
         threading.Thread(target=self.update_motor).start()
 
     def calculate_pwm(self):
@@ -38,7 +39,9 @@ class MotorControl():
             self.direction = direction
 
     def update_motor(self):
+        print('Start motor controller.')
         while True:
+            self.moe += 1
             self.active_led.value = self.switch.value
             start = False
             stop = False
@@ -55,7 +58,7 @@ class MotorControl():
                 pwm.stop()
                 self.pwm_value = 0
                 self.running = False
-                return (self.switch.value, self.pwm_value)
+                continue
             if self.value_changed:
                 self.value_changed = False
                 # print('Set: pwm:', self.pwm_value, ', switch: ', self.switch.value, ', direction:', self.direction, ', wheel angle:', wheel_angle)
@@ -78,7 +81,7 @@ class MotorControl():
             self.ok_to_run = True
         else:
             self.ok_to_run = False
-        return (self.switch.value, self.pwm_value)
+        # print(self.moe, self.switch.value, self.pwm_value, self.direction)
 
     def pwm_display(self):
         return int(self.pwm_value * 2.55)

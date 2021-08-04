@@ -24,17 +24,16 @@ def main():
                 settings.settings.update(payload)
                 settings.save_settings()
             if pgn == 0xfe:
-                (switch, pwm) = motor_control.set_control(payload)
+                motor_control.set_control(payload)
         # (switch, pwm) = motor_control.update_motor(was.angle)
         # agio.alive()
-        if switch:
+        if motor_control.switch.value:
             switch = 0x00
         else:
             switch = 0xff
-        pwm_display = int(pwm * 2.55)
-        # heading = 0 # Disable heading
+        heading = imu.heading # 0 # Disable heading
         # roll = 0
-        agio.from_autosteer(was.angle, imu.heading, imu.roll, switch, pwm_display)
+        agio.from_autosteer(was.angle, heading, imu.roll, switch, motor_control.pwm_display())
 
         time.sleep(0.01)
 
