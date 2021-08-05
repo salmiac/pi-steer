@@ -69,7 +69,7 @@ class MotorControl():
                 print('Start!')
                 pwm.start()
                 self.running = True
-            time.sleep(0.02)
+            time.sleep(0.005)
 
     def set_control(self, auto_steer_data):
         # auto_steer_data['Speed']

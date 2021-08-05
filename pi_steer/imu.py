@@ -20,6 +20,6 @@ def reader():
             # pass
             print('IMU read failed', err)
         # print('Imu read took: ', time.time()-tic, 's.')
-        time.sleep(0.1)
+        time.sleep(0.01)
 
 threading.Thread(target=reader).start()

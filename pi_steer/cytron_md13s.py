@@ -1,6 +1,6 @@
 import time
 
-FREQUENCY = 20000
+FREQUENCY = 2000
 
 def write(file, command):
     try:
