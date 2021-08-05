@@ -1,12 +1,19 @@
 # PiSteer
-Autosteer controller.
+Autosteer controller. 
 
+## Warning
+This just just for demonstration and proof of concept. This should never ever be used on full sized machinery. You will crash and die if You do. You have been warned.
+
+## Other documents
+Pictures and something [here](Documents/README.md).
+
+## Program 
 Run program by:
 
-`python3 autosteer.py`
+`python3 pi-steer/autosteer.py`
 
 ## Raspberry Pi 3
-Why Raspberry Pi? It's somethin I had laying around.
+Why Raspberry Pi? It's just somethin I had laying around.
 
 ### Install
 
@@ -89,6 +96,9 @@ https://docs.google.com/document/d/1icu1GVDxZhUn3ADSUc3JknNcmUMdPcsnJ4MhxOPRo-I/
 
 Set hardware PWM on Raspberry Pi 3
 https://blog.oddbit.com/post/2017-09-26-some-notes-on-pwm-on-the-raspb/
+
+Now it is not fully hardware PWM. I think it uses DMA and maybe kernel code to maintain PWM, 20 kHz uses uses about 100 % of CPU. 2 kHz is used is this code.
+It is still a lot better than gpiozero fully software PWM, where maximum practical frequency is around 300 Hz.
 
 edit `/boot/config.txt`
 Add the line `dtoverlay=pwm-2chan,pin=12,func=4,pin2=13,func2=4`
