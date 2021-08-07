@@ -197,7 +197,8 @@ class BNO085():
             if roll < -MAXIMUM_ROLL:
                 roll = -MAXIMUM_ROLL
 
-            if abs(roll - self.last_roll) > 5:
-                roll = roll * 0.1 + self.last_roll
+            roll_diff = roll - self.last_roll
+            if abs(roll_diff) > 5:
+                roll = roll_diff * 0.1 + self.last_roll
 
             return (heading, roll, pitch)
