@@ -34,8 +34,6 @@ FEATURES = [
     # BNO_REPORT_GEOMAGNETIC_ROTATION_VECTOR, 
     ]
 
-MAXIMUM_ROLL = 30 # degrees
-
 reset = DigitalOutputDevice('BOARD11', active_high=False, initial_value=True)
 
 def timeout(signum, frame):
@@ -113,6 +111,7 @@ class BNO085():
     def __init__(self) -> None:
         self.bno = start()
         self.last_heading = None
+        self.heading_reference = 0
         self.last_roll = 0
 
     def read(self):
@@ -181,24 +180,12 @@ class BNO085():
             siny_cosp = 2 * (qw * qz + qx * qy)
             cosy_cosp = 1 - 2 * (qy * qy + qz * qz)
             heading = degrees(atan2(siny_cosp, cosy_cosp))
-            if heading < 0:
-                heading += 360
-            heading = 360 - heading
-            if self.last_heading is not None and abs(self.last_heading - heading) > 30 and heading_counter < 3:
-                heading_counter += 1
-                time.sleep(0.1)
-                continue
+            heading = (heading + self.heading_reference) % 360
+            # if self.last_heading is not None and abs(self.last_heading - heading) > 30 and heading_counter < 3:
+            #     heading_counter += 1
+            #     time.sleep(0.1)
+            #     continue
             heading_counter = 0
             self.last_heading = heading
-            # heading = 0
-
-            if roll > MAXIMUM_ROLL:
-                roll = MAXIMUM_ROLL
-            if roll < -MAXIMUM_ROLL:
-                roll = -MAXIMUM_ROLL
-
-            roll_diff = roll - self.last_roll
-            if abs(roll_diff) > 5:
-                roll = roll_diff * 0.1 + self.last_roll
-
+ 
             return (heading, roll, pitch)

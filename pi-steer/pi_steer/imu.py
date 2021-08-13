@@ -2,6 +2,8 @@ import time
 import pi_steer.bno085
 import threading
 
+MAXIMUM_ROLL = 30 # degrees
+
 heading = 0
 roll = 0
 pitch = 0
@@ -15,7 +17,15 @@ def reader():
     while True:
         tic = time.time()
         try:
-            (heading, roll, pitch) = bno.read()
+            (_heading, _roll, _pitch) = bno.read()
+            heading = _heading
+            if _roll > MAXIMUM_ROLL:
+                _roll = MAXIMUM_ROLL
+            if _roll < -MAXIMUM_ROLL:
+                _roll = -MAXIMUM_ROLL
+            roll = _roll
+            pitch = _pitch
+
         except Exception as err:
             # pass
             print('IMU read failed', err)

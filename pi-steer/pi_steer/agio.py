@@ -179,12 +179,12 @@ class AgIO():
         except (socket.error, socket.timeout) as err:
             print('Read error', err)
             return (None, None)
-        else:
-            # print(read, address)
-            if len(read) < 6:
-                return (None, None)
-            if read[0] == 0x80 and read[1] == 0x81:
-                return decode_data(read)
+        # print(read, address)
+        if len(read) < 6:
+            return (None, None)
+        if read[0] == 0x80 and read[1] == 0x81:
+            return decode_data(read)
+        return (None, None)
 
     def alive(self):
         self.client.sendto(bytes(alive), ('255.255.255.255',9999))
@@ -207,5 +207,8 @@ class AgIO():
         crc %= 256
         data.append(crc)
 
-        self.client.sendto(bytes(data), ('255.255.255.255',9999))
+        try:
+            self.client.sendto(bytes(data), ('255.255.255.255',9999))
+        except Exception as err:
+            print('Send error', err)
         # print(data)
