@@ -9,8 +9,8 @@ from adafruit_bno08x import (
     # BNO_REPORT_GYROSCOPE,
     # BNO_REPORT_MAGNETOMETER,
     # BNO_REPORT_LINEAR_ACCELERATION,
-    BNO_REPORT_ROTATION_VECTOR,
-    # BNO_REPORT_GAME_ROTATION_VECTOR,
+    # BNO_REPORT_ROTATION_VECTOR,
+    BNO_REPORT_GAME_ROTATION_VECTOR,
     # BNO_REPORT_GEOMAGNETIC_ROTATION_VECTOR, 
     # BNO_REPORT_STEP_COUNTER,
     # BNO_REPORT_RAW_ACCELEROMETER,
@@ -30,9 +30,10 @@ from adafruit_bno08x.i2c import BNO08X_I2C
 #     BNO_REPORT_GYRO_INTEGRATED_ROTATION_VECTOR]
 
 FEATURES = [
-    BNO_REPORT_ROTATION_VECTOR,
-    # BNO_REPORT_GEOMAGNETIC_ROTATION_VECTOR, 
+    BNO_REPORT_GAME_ROTATION_VECTOR,
     ]
+
+AVG = 5
 
 reset = DigitalOutputDevice('BOARD11', active_high=False, initial_value=True)
 
@@ -89,32 +90,34 @@ def init(i2c):
         print(now(), 'BNO085 initialized.')
         return bno
 
-def start():
-    print(now(), 'Init BNO085')
-    while True:
-        try:
-            i2c = I2C(SCL, SDA, frequency=400000)
-        except Exception as err:
-            print(now(), 'I2C failed', err)
-            return None
-        time.sleep(0.2)
-        bno = init(i2c)
-        if not bno:
-            hard_reset()
-            continue
-        if not enable_features(bno):
-            hard_reset()
-            continue
-        return bno
-
 class BNO085():
     def __init__(self) -> None:
-        self.bno = start()
+        self.bno = self.start()
         self.last_heading = None
         self.heading_reference = 0
         self.last_roll = 0
 
-    def read(self):
+    def start(self):
+        print(now(), 'Init BNO085')
+        while True:
+            try:
+                i2c = I2C(SCL, SDA, frequency=100000)
+            except Exception as err:
+                print(now(), 'I2C failed', err)
+                return None
+            time.sleep(0.2)
+            bno = init(i2c)
+            if not bno:
+                hard_reset()
+                continue
+            if not enable_features(bno):
+                hard_reset()
+                continue
+            if self.last_heading is not None:
+                self.heading_reference = (self.heading_reference + self.last_heading) % 360
+            return bno
+
+    def read_single(self):
         read_counter = 0
         reset_counter = 0
         value_counter = 0
@@ -130,12 +133,12 @@ class BNO085():
                 print(now(), 'BNO085 heading retry: ', heading_counter)
             if self.bno is None:
                 time.sleep(1)
-                self.bno = start()
+                self.bno = self.start()
                 continue
             read_counter += 1
             # signal.alarm(1)
             try:
-                (qx, qy, qz, qw) = self.bno.quaternion
+                (qx, qy, qz, qw) = self.bno.game_quaternion
             except:
                 # signal.alarm(0)
                 time.sleep(0.02)
@@ -189,3 +192,8 @@ class BNO085():
             self.last_heading = heading
  
             return (heading, roll, pitch)
+
+    def read(self):
+        
+        # for n in range(AVG):
+        return self.read_single()

@@ -8,7 +8,7 @@ from adafruit_ads1x15.ads1x15 import Mode
 def init():
     print('Init ADS1115')
     try:
-        i2c = I2C(SCL, SDA, frequency=400000)
+        i2c = I2C(SCL, SDA, frequency=100000)
     except Exception as err:
         print('I2C failed', err)
         return None
