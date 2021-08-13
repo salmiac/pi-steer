@@ -92,10 +92,10 @@ def init(i2c):
 
 class BNO085():
     def __init__(self) -> None:
-        self.bno = self.start()
         self.last_heading = None
         self.heading_reference = 0
         self.last_roll = 0
+        self.bno = self.start()
 
     def start(self):
         print(now(), 'Init BNO085')
@@ -182,7 +182,7 @@ class BNO085():
 
             siny_cosp = 2 * (qw * qz + qx * qy)
             cosy_cosp = 1 - 2 * (qy * qy + qz * qz)
-            heading = degrees(atan2(siny_cosp, cosy_cosp))
+            heading = -degrees(atan2(siny_cosp, cosy_cosp))
             heading = (heading + self.heading_reference) % 360
             # if self.last_heading is not None and abs(self.last_heading - heading) > 30 and heading_counter < 3:
             #     heading_counter += 1
