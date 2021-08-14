@@ -1,3 +1,4 @@
+import math
 import time
 import signal
 from gpiozero import DigitalOutputDevice
@@ -121,7 +122,6 @@ class BNO085():
         read_counter = 0
         reset_counter = 0
         value_counter = 0
-        heading_counter = 0
         while True:
             if read_counter:
                 print(now(), 'BNO085 Read retry: ', read_counter)
@@ -129,8 +129,6 @@ class BNO085():
                 print(now(), 'BNO085 Reset retry: ', reset_counter)
             if value_counter:
                 print(now(), 'BNO085 value error: ', value_counter)
-            if heading_counter:
-                print(now(), 'BNO085 heading retry: ', heading_counter)
             if self.bno is None:
                 time.sleep(1)
                 self.bno = self.start()
@@ -159,12 +157,41 @@ class BNO085():
                     continue
                 hard_reset()
                 self.bno = None
-                time.sleep(0.5)
+                time.sleep(0.1)
                 continue
             # signal.alarm(0)
 
             read_counter = 0
             reset_counter = 0
+            if abs(qw) > 1 or abs(qx) > 1 or abs(qy) > 1 or abs(qz) > 1:
+                value_counter += 1
+                print(now(), 'Value error:', qx, qy, qz, qw )
+                time.sleep(0.01)
+                continue
+            value_counter = 0
+            norm = math.sqrt(qw*qw + qx*qx + qy*qy + qz*qz)
+            if norm == 0:
+                continue
+ 
+            return (qx/norm, qy/norm, qz/norm, qw/norm)
+
+    def read(self):
+        while True:
+            sum_qx = 0
+            sum_qy = 0
+            sum_qz = 0
+            sum_qw = 0
+            for n in range(AVG):
+                (qx, qy, qz, qw) = self.read_single()
+                sum_qx += qx
+                sum_qy += qy
+                sum_qz += qz
+                sum_qw += qw
+            qx = sum_qx / AVG
+            qy = sum_qy / AVG
+            qz = sum_qz / AVG
+            qw = sum_qw / AVG
+            
             sinr_cosp = 2 * (qw * qx + qy * qz)
             cosr_cosp = 1 - 2 * (qx * qx + qy * qy)
             roll = degrees(atan2(sinr_cosp, cosr_cosp))
@@ -173,27 +200,18 @@ class BNO085():
             try:
                 pitch = asin(sinp)
             except ValueError:
-                value_counter += 1
                 print(now(), 'Value error:', qx, qy, qz, qw )
                 time.sleep(0.01)
                 continue
-            value_counter = 0
             pitch = degrees(pitch)
 
             siny_cosp = 2 * (qw * qz + qx * qy)
             cosy_cosp = 1 - 2 * (qy * qy + qz * qz)
             heading = -degrees(atan2(siny_cosp, cosy_cosp))
             heading = (heading + self.heading_reference) % 360
-            # if self.last_heading is not None and abs(self.last_heading - heading) > 30 and heading_counter < 3:
-            #     heading_counter += 1
-            #     time.sleep(0.1)
-            #     continue
-            heading_counter = 0
             self.last_heading = heading
- 
+
             return (heading, roll, pitch)
 
-    def read(self):
-        
-        # for n in range(AVG):
-        return self.read_single()
+
+
