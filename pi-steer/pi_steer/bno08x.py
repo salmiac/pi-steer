@@ -136,8 +136,7 @@ class BNO085():
             # signal.alarm(1)
             try:
                 # (qx, qy, qz, qw) = self.bno.game_quaternion
-                self.search_packet(BNO_REPORT_GAME_ROTATION_VECTOR)
-                self.bno._readings[BNO_REPORT_GAME_ROTATION_VECTOR]
+                (qx, qy, qz, qw) = self.bno._readings[BNO_REPORT_GAME_ROTATION_VECTOR]
             except:
                 # signal.alarm(0)
                 time.sleep(0.02)
@@ -221,11 +220,14 @@ class BNO085():
             while self.bno._data_ready:
                 try:
                     new_packet = self.bno._read_packet()
-                except PacketError:
+                except PacketError as err:
+                    print('Packet error', err)
                     continue
                 self.bno._handle_packet(new_packet)
                 processed_count += 1
-                if id is None or new_packet.report_id == id:
-                    return
+                if id is None:
+                    return None
+                if new_packet.report_id == id:
+                    return self.bno._readings[id]
             time.sleep(0.001)
            
