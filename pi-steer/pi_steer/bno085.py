@@ -108,6 +108,8 @@ class BNO085():
                 return None
             time.sleep(0.2)
             bno = init(i2c)
+            bno.initialize()
+            time.sleep(1)
             if not bno:
                 hard_reset()
                 continue
