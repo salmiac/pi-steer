@@ -96,7 +96,15 @@ def init(i2c):
         return bno
 
 class BNO08X():
-    def __init__(self, i2c) -> None:
+    def __init__(self) -> None:
+        while True:
+            try:
+                i2c = I2C(SCL, SDA, frequency=40000)
+            except Exception as err:
+                print('I2C failed', err)
+                continue
+            break
+        
         self.i2c = i2c
         self.last_heading = None
         self.heading_reference = 0

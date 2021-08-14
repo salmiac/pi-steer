@@ -4,10 +4,10 @@ import pi_steer.ads1115
 import pi_steer.settings
 
 class WAS():
-    def __init__(self, settings, i2c) -> None:
+    def __init__(self, settings) -> None:
         self.settings = settings
         self.angle = 0
-        self.ads = pi_steer.ads1115.ADS1115(i2c)
+        self.ads = pi_steer.ads1115.ADS1115()
         # threading.Thread(target=self.reader).start()
 
     def read(self):

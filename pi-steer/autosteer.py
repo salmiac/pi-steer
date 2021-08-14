@@ -7,12 +7,10 @@ import pi_steer.settings
 import pi_steer.motor_control
 import pi_steer.was
 import pi_steer.activity_led
-import pi_steer.i2c
 
-i2c = pi_steer.i2c.get_i2c()
-imu.start(i2c)
+imu.start()
 settings = pi_steer.settings.Settings()
-was = pi_steer.was.WAS(settings, i2c)
+was = pi_steer.was.WAS(settings)
 agio = pi_steer.agio.AgIO(settings)
 motor_control = pi_steer.motor_control.MotorControl(settings, was)
 

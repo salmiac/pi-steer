@@ -1,11 +1,8 @@
 import time
 import numpy
 import pi_steer.bno08x
-import pi_steer.i2c
 
-i2c = pi_steer.i2c.get_i2c()
-
-bno = pi_steer.bno08x.BNO08X(i2c)
+bno = pi_steer.bno08x.BNO08X()
 
 headings = []
 rolls = []

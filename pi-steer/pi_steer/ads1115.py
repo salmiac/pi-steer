@@ -5,13 +5,8 @@ import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
 from adafruit_ads1x15.ads1x15 import Mode
 
-def init():
+def init(i2c):
     print('Init ADS1115')
-    try:
-        i2c = I2C(SCL, SDA, frequency=100000)
-    except Exception as err:
-        print('I2C failed', err)
-        return None
 
     try:
         ads = ADS.ADS1115(i2c)
@@ -22,7 +17,15 @@ def init():
     return ads
 
 class ADS1115():
-    def __init__(self, i2c):
+    def __init__(self):
+        while True:
+            try:
+                i2c = I2C(SCL, SDA, frequency=40000)
+            except Exception as err:
+                print('I2C failed', err)
+                continue
+            break
+
         self.ads = init(i2c)
         self.i2c = i2c
 
