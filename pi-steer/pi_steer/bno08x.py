@@ -35,7 +35,7 @@ FEATURES = [
     BNO_REPORT_GAME_ROTATION_VECTOR,
     ]
 
-AVG = 5
+AVG = 2
 
 reset = DigitalOutputDevice('BOARD11', active_high=False, initial_value=True)
 
@@ -43,6 +43,9 @@ def timeout(signum, frame):
     raise Exception('Timeout')
 
 signal.signal(signal.SIGALRM, timeout)
+
+def what(a, b):
+    print('slices', a,b)
 
 def now():
     return time.strftime('%X')
@@ -98,15 +101,15 @@ class BNO08X():
         self.last_heading = None
         self.heading_reference = 0
         self.last_roll = 0
-        self.bno = self.start()
+        self.start()
 
     def start(self):
         print(now(), 'Init BNO085')
         while True:
-            time.sleep(0.2)
+            time.sleep(0.1)
             bno = init(self.i2c)
             bno.initialize()
-            time.sleep(1)
+            time.sleep(0.1)
             if not bno:
                 hard_reset()
                 continue
@@ -115,7 +118,15 @@ class BNO08X():
                 continue
             if self.last_heading is not None:
                 self.heading_reference = (self.heading_reference + self.last_heading) % 360
-            return bno
+            self.bno = bno
+            for discard in range(7):
+                try:
+                    (qx, qy, qz, qw) = self.search_packet(BNO_REPORT_GAME_ROTATION_VECTOR)
+                except:
+                    pass
+                print('First values:', qx, qy, qz, qw)
+
+            return
 
     def read_single(self):
         read_counter = 0
@@ -127,17 +138,19 @@ class BNO08X():
             if reset_counter:
                 print(now(), 'BNO085 Reset retry: ', reset_counter)
             if value_counter:
-                print(now(), 'BNO085 value error: ', value_counter)
+                pass
+                # print(now(), 'BNO085 value error: ', value_counter)
             if self.bno is None:
                 time.sleep(1)
-                self.bno = self.start()
+                self.start()
                 continue
             read_counter += 1
             # signal.alarm(1)
             try:
                 # (qx, qy, qz, qw) = self.bno.game_quaternion
-                (qx, qy, qz, qw) = self.search_packet([BNO_REPORT_GAME_ROTATION_VECTOR])
-            except:
+                (qx, qy, qz, qw) = self.search_packet(BNO_REPORT_GAME_ROTATION_VECTOR)
+            except Exception as err:
+                print('BNO packet read error:', err)
                 # signal.alarm(0)
                 time.sleep(0.02)
                 if read_counter < 3:
@@ -165,8 +178,8 @@ class BNO08X():
             reset_counter = 0
             if abs(qw) > 1 or abs(qx) > 1 or abs(qy) > 1 or abs(qz) > 1:
                 value_counter += 1
-                print(now(), 'Value error:', qx, qy, qz, qw )
-                time.sleep(0.01)
+                # print(now(), 'Value error:', qx, qy, qz, qw )
+                # time.sleep(0.01)
                 continue
             value_counter = 0
             norm = math.sqrt(qw*qw + qx*qx + qy*qy + qz*qz)
@@ -217,23 +230,23 @@ class BNO08X():
     def search_packet(self, id=None):
         processed_count = 0
         while True:
-            print('read packet')
             while self.bno._data_ready:
                 try:
                     new_packet = self.bno._read_packet()
                 except PacketError as err:
                     print('Packet error', err)
                     continue
+                packet_report_id = new_packet.data[5]
                 try:
                     self.bno._handle_packet(new_packet)
                 except Exception as err:
                     print('packet handle error', err)
                     continue
-                print(new_packet.report_id)
                 processed_count += 1
                 if id is None:
                     return None
-                if new_packet.report_id == id:
-                    return self.bno._readings[id]
-            time.sleep(0.1)
+                if packet_report_id == id:
+                    data = self.bno._readings[id]
+                    return data
+            time.sleep(0.001)
            

@@ -22,9 +22,9 @@ while True:
     rolls.append(roll)
     pitches.append(pitch)
 
-    # print('\r H {: = 7.2f} P {: = 7.2f} R {: = 7.2f}   '.format(heading, pitch, roll))
-    # time.sleep(0.1)
-    # continue
+    print('\r H {: = 7.2f} P {: = 7.2f} R {: = 7.2f}  {} '.format(heading, pitch, roll, n), end='')
+    # time.sleep(0.01)
+    continue
 
     min_heading = numpy.amin(headings)
     max_heading = numpy.amax(headings)
