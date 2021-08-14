@@ -8,8 +8,8 @@ heading = 0
 roll = 0
 pitch = 0
 
-def reader():
-    bno = pi_steer.bno085.BNO085()
+def reader(ic2):
+    bno = pi_steer.bno085.BNO085(i2c)
     global heading
     global roll
     global pitch
@@ -32,4 +32,5 @@ def reader():
         # print('Imu read took: ', time.time()-tic, 's.')
         time.sleep(0.01)
 
-threading.Thread(target=reader).start()
+def start(i2c):
+    threading.Thread(target=reader, args=(i2c,)).start()

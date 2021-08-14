@@ -6,6 +6,7 @@ from math import atan2, asin, pi, degrees
 from board import SCL, SDA
 from busio import I2C
 from adafruit_bno08x import (
+    PacketError,
     # BNO_REPORT_ACCELEROMETER,
     # BNO_REPORT_GYROSCOPE,
     # BNO_REPORT_MAGNETOMETER,
@@ -134,7 +135,9 @@ class BNO085():
             read_counter += 1
             # signal.alarm(1)
             try:
-                (qx, qy, qz, qw) = self.bno.game_quaternion
+                # (qx, qy, qz, qw) = self.bno.game_quaternion
+                self.search_packet(BNO_REPORT_GAME_ROTATION_VECTOR)
+                self.bno._readings[BNO_REPORT_GAME_ROTATION_VECTOR]
             except:
                 # signal.alarm(0)
                 time.sleep(0.02)
@@ -212,4 +215,17 @@ class BNO085():
             return (heading, roll, pitch)
 
 
-
+    def search_packet(self, id=None):
+        processed_count = 0
+        while True:
+            while self.bno._data_ready:
+                try:
+                    new_packet = self.bno._read_packet()
+                except PacketError:
+                    continue
+                self.bno._handle_packet(new_packet)
+                processed_count += 1
+                if id is None or new_packet.report_id == id:
+                    return
+            time.sleep(0.001)
+           

@@ -22,8 +22,9 @@ def init():
     return ads
 
 class ADS1115():
-    def __init__(self):
-        self.ads = init()
+    def __init__(self, i2c):
+        self.ads = init(i2c)
+        self.i2c = i2c
 
     def read(self):
         while True:
@@ -32,7 +33,7 @@ class ADS1115():
             except Exception as err:
                 print('ADS1115 Read failed', err)
                 time.sleep(0.01)
-                self.ads = init()
+                self.ads = init(self.i2c)
                 continue
         
             return chan.voltage
