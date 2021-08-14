@@ -117,7 +117,7 @@ class BNO08X():
                 hard_reset()
                 continue
             if self.last_heading is not None:
-                self.heading_reference = (self.heading_reference + self.last_heading) % 360
+                self.heading_reference = self.last_heading
             self.bno = bno
             for discard in range(7):
                 try:
