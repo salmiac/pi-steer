@@ -196,13 +196,13 @@ class BNO08X():
             sum_qw = 0
             for n in range(AVG):
                 (qx, qy, qz, qw) = self.read_single()
-                if not n:
+                if n:
                     dx = sum_qx/n - qx
                     dy = sum_qy/n - qy
                     dz = sum_qz/n - qz
                     dw = sum_qw/n - qw
                     diff = math.sqrt(dx*dx + dy*dy + dz*dz + dw*dw)
-                    print('Diff', diff)
+                    # print('Diff', diff)
                     if diff > 0.1:
                         print('Unreliable value', dx, dy, dz, dw)
                         continue
