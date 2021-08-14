@@ -92,7 +92,7 @@ def init(i2c):
         print(now(), 'BNO085 initialized.')
         return bno
 
-class BNO085():
+class BNO08X():
     def __init__(self, i2c) -> None:
         self.i2c = i2c
         self.last_heading = None

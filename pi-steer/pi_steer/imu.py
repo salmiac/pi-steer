@@ -1,5 +1,5 @@
 import time
-import pi_steer.bno085
+import pi_steer.bno08x
 import threading
 
 MAXIMUM_ROLL = 30 # degrees
@@ -8,8 +8,8 @@ heading = 0
 roll = 0
 pitch = 0
 
-def reader(ic2):
-    bno = pi_steer.bno085.BNO085(i2c)
+def reader(i2c):
+    bno = pi_steer.bno08x.BNO08X(i2c)
     global heading
     global roll
     global pitch
