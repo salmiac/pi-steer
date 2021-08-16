@@ -12,8 +12,8 @@ from adafruit_bno08x import (
     # BNO_REPORT_GYROSCOPE,
     # BNO_REPORT_MAGNETOMETER,
     # BNO_REPORT_LINEAR_ACCELERATION,
-    # BNO_REPORT_ROTATION_VECTOR,
-    BNO_REPORT_GAME_ROTATION_VECTOR,
+    BNO_REPORT_ROTATION_VECTOR,
+    # BNO_REPORT_GAME_ROTATION_VECTOR,
     # BNO_REPORT_GEOMAGNETIC_ROTATION_VECTOR, 
     # BNO_REPORT_STEP_COUNTER,
     # BNO_REPORT_RAW_ACCELEROMETER,
@@ -33,10 +33,12 @@ from adafruit_bno08x.i2c import BNO08X_I2C
 #     BNO_REPORT_GYRO_INTEGRATED_ROTATION_VECTOR]
 
 FEATURES = [
-    BNO_REPORT_GAME_ROTATION_VECTOR,
+    BNO_REPORT_ROTATION_VECTOR,
     ]
 
-AVG = 2
+BNO_PACKET = BNO_REPORT_ROTATION_VECTOR
+AVG = 3
+AVG_DIFF = 0.05
 
 reset = DigitalOutputDevice('BOARD11', active_high=False, initial_value=True)
 
@@ -134,7 +136,7 @@ class BNO08X():
             self.bno = bno
             for discard in range(7):
                 try:
-                    (qx, qy, qz, qw) = self.search_packet(BNO_REPORT_GAME_ROTATION_VECTOR)
+                    (qx, qy, qz, qw) = self.search_packet(BNO_PACKET)
                 except:
                     pass
                 print('First values:', qx, qy, qz, qw)
@@ -161,7 +163,7 @@ class BNO08X():
             # signal.alarm(1)
             try:
                 # (qx, qy, qz, qw) = self.bno.game_quaternion
-                (qx, qy, qz, qw) = self.search_packet(BNO_REPORT_GAME_ROTATION_VECTOR)
+                (qx, qy, qz, qw) = self.search_packet(BNO_PACKET)
                 if self.debug:
                     self.debug_data.log_csv([time.monotonic(), qx, qy, qz, qw])
             except Exception as err:
@@ -218,7 +220,7 @@ class BNO08X():
                     dw = sum_qw/n - qw
                     diff = math.sqrt(dx*dx + dy*dy + dz*dz + dw*dw)
                     # print('Diff', diff)
-                    if diff > 0.1:
+                    if diff > AVG_DIFF:
                         print('Unreliable value', dx, dy, dz, dw)
                         continue
                 sum_qx += qx
