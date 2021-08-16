@@ -8,8 +8,8 @@ heading = 0
 roll = 0
 pitch = 0
 
-def reader():
-    bno = pi_steer.bno08x.BNO08X()
+def reader(debug):
+    bno = pi_steer.bno08x.BNO08X(debug)
     global heading
     global roll
     global pitch
@@ -32,5 +32,5 @@ def reader():
         # print('Imu read took: ', time.time()-tic, 's.')
         time.sleep(0.01)
 
-def start():
-    threading.Thread(target=reader).start()
+def start(debug):
+    threading.Thread(target=reader, args=(debug,)).start()

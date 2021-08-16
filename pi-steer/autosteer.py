@@ -1,6 +1,8 @@
 import time
 import sys
 import threading
+import getopt
+
 import pi_steer.imu as imu
 import pi_steer.agio
 import pi_steer.settings
@@ -8,13 +10,7 @@ import pi_steer.motor_control
 import pi_steer.was
 import pi_steer.activity_led
 
-imu.start()
-settings = pi_steer.settings.Settings()
-was = pi_steer.was.WAS(settings)
-agio = pi_steer.agio.AgIO(settings)
-motor_control = pi_steer.motor_control.MotorControl(settings, was)
-
-def agio_reader():
+def agio_reader(agio, settings, motor_control):
     while True:
         (pgn, payload) = agio.read()
         if pgn is not None:
@@ -27,8 +23,24 @@ def agio_reader():
             if pgn == 0xfe:
                 motor_control.set_control(payload)
 
-def main():
-    threading.Thread(target=agio_reader).start()
+def main(argv):
+    try:
+        options, arguments = getopt.getopt(argv, "d")
+    except getopt.GetoptError:
+        pass
+
+    debug = False
+    if '-d' in options:
+        # Debug log file
+        debug = True
+
+    imu.start(debug)
+    settings = pi_steer.settings.Settings()
+    was = pi_steer.was.WAS(settings)
+    agio = pi_steer.agio.AgIO(settings)
+    motor_control = pi_steer.motor_control.MotorControl(settings, was)
+
+    threading.Thread(target=agio_reader, args=(agio, settings, motor_control,)).start()
 
     while True:
         # print('\r H {: = 7.2f} R {: = 7.2f}'.format(imu.heading, imu.roll), end='')
@@ -45,7 +57,7 @@ def main():
 
 if __name__ == '__main__':
     try:
-        main()
+        main(sys.argv[1:])
     except KeyboardInterrupt as e:
         print(e)
         # pwm.stop()

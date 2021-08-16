@@ -1,6 +1,7 @@
 import math
 import time
 import signal
+import pi_steer.log
 from gpiozero import DigitalOutputDevice
 from math import atan2, asin, pi, degrees
 from board import SCL, SDA
@@ -96,7 +97,7 @@ def init(i2c):
         return bno
 
 class BNO08X():
-    def __init__(self) -> None:
+    def __init__(self, debug) -> None:
         while True:
             try:
                 i2c = I2C(SCL, SDA, frequency=40000)
@@ -104,7 +105,11 @@ class BNO08X():
                 print('I2C failed', err)
                 continue
             break
-        
+            
+        if debug:
+            self.debug = debug
+            self.debug_data = pi_steer.log.Log('bno08x data')
+            self.debug_error = pi_steer.log.Log('bno08x error')
         self.i2c = i2c
         self.last_heading = None
         self.heading_reference = 0
@@ -157,6 +162,8 @@ class BNO08X():
             try:
                 # (qx, qy, qz, qw) = self.bno.game_quaternion
                 (qx, qy, qz, qw) = self.search_packet(BNO_REPORT_GAME_ROTATION_VECTOR)
+                if self.debug:
+                    self.debug_data.log_csv([time.monotonic(), qx, qy, qz, qw])
             except Exception as err:
                 print('BNO packet read error:', err)
                 # signal.alarm(0)
