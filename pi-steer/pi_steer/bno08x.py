@@ -12,8 +12,8 @@ from adafruit_bno08x import (
     # BNO_REPORT_GYROSCOPE,
     # BNO_REPORT_MAGNETOMETER,
     # BNO_REPORT_LINEAR_ACCELERATION,
-    BNO_REPORT_ROTATION_VECTOR,
-    # BNO_REPORT_GAME_ROTATION_VECTOR,
+    # BNO_REPORT_ROTATION_VECTOR,
+    BNO_REPORT_GAME_ROTATION_VECTOR,
     # BNO_REPORT_GEOMAGNETIC_ROTATION_VECTOR, 
     # BNO_REPORT_STEP_COUNTER,
     # BNO_REPORT_RAW_ACCELEROMETER,
@@ -33,10 +33,10 @@ from adafruit_bno08x.i2c import BNO08X_I2C
 #     BNO_REPORT_GYRO_INTEGRATED_ROTATION_VECTOR]
 
 FEATURES = [
-    BNO_REPORT_ROTATION_VECTOR,
+    BNO_REPORT_GAME_ROTATION_VECTOR,
     ]
 
-BNO_PACKET = BNO_REPORT_ROTATION_VECTOR
+BNO_PACKET = BNO_REPORT_GAME_ROTATION_VECTOR
 AVG = 3
 AVG_DIFF = 0.05
 
@@ -108,8 +108,8 @@ class BNO08X():
                 continue
             break
             
+        self.debug = debug
         if debug:
-            self.debug = debug
             self.debug_data = pi_steer.log.Log('bno08x data')
             self.debug_error = pi_steer.log.Log('bno08x error')
         self.i2c = i2c

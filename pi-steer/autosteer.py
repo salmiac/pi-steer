@@ -29,9 +29,11 @@ def main(argv):
     except getopt.GetoptError:
         pass
 
+    print('options', argv, options)
     debug = False
-    if '-d' in options:
+    if '-d' in argv:
         # Debug log file
+        print('Debug on')
         debug = True
 
     imu.start(debug)
