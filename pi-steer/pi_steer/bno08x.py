@@ -111,6 +111,7 @@ class BNO08X():
         self.debug = debug
         if debug:
             self.debug_data = pi_steer.log.Log('bno08x data')
+            self.debug_euler = pi_steer.log.Log('bno08x euler')
             self.debug_error = pi_steer.log.Log('bno08x error')
         self.i2c = i2c
         self.last_heading = None
@@ -250,6 +251,9 @@ class BNO08X():
             heading = -degrees(atan2(siny_cosp, cosy_cosp))
             heading = (heading + self.heading_reference) % 360
             self.last_heading = heading
+
+            if self.debug:
+                self.debug_euler.log_csv([time.monotonic(), heading, roll, pitch])
 
             return (heading, roll, pitch)
 
