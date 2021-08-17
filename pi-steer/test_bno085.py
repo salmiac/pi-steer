@@ -2,7 +2,7 @@ import time
 import numpy
 import pi_steer.bno08x
 
-bno = pi_steer.bno08x.BNO08X()
+bno = pi_steer.bno08x.BNO08X(True)
 
 headings = []
 rolls = []
