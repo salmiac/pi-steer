@@ -170,7 +170,7 @@ class BNO08X():
                 print('BNO packet read error:', err)
                 # signal.alarm(0)
                 time.sleep(0.02)
-                if read_counter < 3:
+                if read_counter < 20:
                     continue
 
                 read_counter = 0
