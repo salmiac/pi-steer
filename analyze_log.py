@@ -37,9 +37,11 @@ def euler(qx, qy, qz, qw):
 
 try:
     filename = sys.argv[1]
+    eulerfile = sys.argv[2]
 except Exception as err:
     print(err)
     sys.exit(0)
+
 
 t_set = []
 qx_set = []
@@ -50,6 +52,10 @@ t_euler = []
 headings = []
 pitches = []
 rolls = []
+e_t = []
+e_headings = []
+e_pitches = []
+e_rolls = []
 
 try:
     with open(filename) as file:
@@ -73,6 +79,19 @@ try:
                 headings.append(heading)
                 pitches.append(pitch)
                 rolls.append(roll)
+    with open(eulerfile) as file:
+        reader = csv.reader(file)
+        for row in reader:
+            # print(row)
+            # sys.exit(0)
+            t = float(row[0])
+            heading = float(row[1])
+            pitch = float(row[2])
+            roll = float(row[3])
+            e_t.append(t)
+            e_headings.append(heading)
+            e_pitches.append(pitch)
+            e_rolls.append(roll)
 except Exception as err:
     print(err)
     sys.exit(0)
@@ -91,7 +110,7 @@ nse2 = numpy.random.randn(len(t))                 # white noise 2
 s1 = numpy.sin(2 * numpy.pi * 10 * t) + nse1
 s2 = numpy.sin(2 * numpy.pi * 10 * t) + nse2
 
-fig, axs = matplotlib.pyplot.subplots(2, 1)
+fig, axs = matplotlib.pyplot.subplots(3, 1)
 print(len(t_set), len(qx_set), len(qy_set), len(qz_set), len(qw_set))
 axs[0].plot(t_set, qx_set, ',-', label='qx', linewidth=1)
 axs[0].plot(t_set, qy_set, ',-', label='qy', linewidth=1)
@@ -111,6 +130,13 @@ axs[1].plot(t_euler, rolls, '.', markersize=2, label='roll', linewidth=2)
 axs[1].set_xlabel('time')
 axs[1].set_title('Euler angles')
 axs[1].legend()
+
+axs[2].plot(e_t, e_headings, '.', markersize=2, label='heading', linewidth=2)
+axs[2].plot(e_t, e_pitches,'.', markersize=2, label='pitch', linewidth=2)
+axs[2].plot(e_t, e_rolls, '.', markersize=2, label='roll', linewidth=2)
+axs[2].set_xlabel('time')
+axs[2].set_title('Filtered Euler angles')
+axs[2].legend()
 
 fig.tight_layout()
 matplotlib.pyplot.show()

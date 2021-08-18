@@ -37,8 +37,6 @@ FEATURES = [
     ]
 
 BNO_PACKET = BNO_REPORT_GAME_ROTATION_VECTOR
-AVG = 3
-AVG_DIFF = 0.05
 
 reset = DigitalOutputDevice('BOARD11', active_high=False, initial_value=True)
 
@@ -117,6 +115,7 @@ class BNO08X():
         self.last_heading = None
         self.heading_reference = 0
         self.last_roll = 0
+        self.last_value = {'time': 0, 'qx': 0, 'qy': 0, 'qz': 0, 'qw': 0}
         self.start()
 
     def start(self):
@@ -200,38 +199,17 @@ class BNO08X():
                 # time.sleep(0.01)
                 continue
             value_counter = 0
+            # Norm should always be 1, or very close to 1
             norm = math.sqrt(qw*qw + qx*qx + qy*qy + qz*qz)
-            if norm == 0:
+            norm_error = abs(1 - norm)
+            if norm_error > 0.01:
+                print('Quaternion norm not 1', norm_error)
                 continue
- 
             return (qx/norm, qy/norm, qz/norm, qw/norm)
 
     def read(self):
         while True:
-            sum_qx = 0
-            sum_qy = 0
-            sum_qz = 0
-            sum_qw = 0
-            for n in range(AVG):
-                (qx, qy, qz, qw) = self.read_single()
-                if n:
-                    dx = sum_qx/n - qx
-                    dy = sum_qy/n - qy
-                    dz = sum_qz/n - qz
-                    dw = sum_qw/n - qw
-                    diff = math.sqrt(dx*dx + dy*dy + dz*dz + dw*dw)
-                    # print('Diff', diff)
-                    if diff > AVG_DIFF:
-                        print('Unreliable value', dx, dy, dz, dw)
-                        continue
-                sum_qx += qx
-                sum_qy += qy
-                sum_qz += qz
-                sum_qw += qw
-            qx = sum_qx / AVG
-            qy = sum_qy / AVG
-            qz = sum_qz / AVG
-            qw = sum_qw / AVG
+            (qx, qy, qz, qw) = self.read_single()
             
             sinr_cosp = 2 * (qw * qx + qy * qz)
             cosr_cosp = 1 - 2 * (qx * qx + qy * qy)
