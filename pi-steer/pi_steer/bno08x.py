@@ -104,6 +104,7 @@ class BNO08X():
             except Exception as err:
                 print('I2C failed', err)
                 continue
+            time.sleep(0.5)
             break
             
         self.debug = debug
@@ -137,9 +138,9 @@ class BNO08X():
             for discard in range(7):
                 try:
                     (qx, qy, qz, qw) = self.search_packet(BNO_PACKET)
+                    print('First values:', qx, qy, qz, qw)
                 except:
                     pass
-                print('First values:', qx, qy, qz, qw)
 
             return
 
@@ -166,6 +167,12 @@ class BNO08X():
                 (qx, qy, qz, qw) = self.search_packet(BNO_PACKET)
                 if self.debug:
                     self.debug_data.log_csv([time.monotonic(), qx, qy, qz, qw])
+            except OSError as err:
+                print(now(), 'OSError reading packet', err)
+                hard_reset()
+                self.bno = None
+                time.sleep(0.1)
+                continue
             except Exception as err:
                 print('BNO packet read error:', err)
                 # signal.alarm(0)
@@ -195,7 +202,7 @@ class BNO08X():
             reset_counter = 0
             if abs(qw) > 1 or abs(qx) > 1 or abs(qy) > 1 or abs(qz) > 1:
                 value_counter += 1
-                # print(now(), 'Value error:', qx, qy, qz, qw )
+                print(now(), 'Value error:', qx, qy, qz, qw )
                 # time.sleep(0.01)
                 continue
             value_counter = 0
@@ -209,7 +216,11 @@ class BNO08X():
 
     def read(self):
         while True:
-            (qx, qy, qz, qw) = self.read_single()
+            try:
+                (qx, qy, qz, qw) = self.read_single()
+            except Exception as err:
+                print(now(), 'Read error', err)
+                continue
             
             sinr_cosp = 2 * (qw * qx + qy * qz)
             cosr_cosp = 1 - 2 * (qx * qx + qy * qy)
