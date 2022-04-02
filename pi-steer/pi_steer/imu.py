@@ -1,36 +1,39 @@
-import time
-import pi_steer.bno08x
-import threading
+import pi_steer.bno055
+import pi_steer.quaternion
+import pi_steer.debug as db
 
-MAXIMUM_ROLL = 30 # degrees
 
-heading = 0
-roll = 0
-pitch = 0
+BNO055_ADDRESS0 = 0x28
+BNO055_ADDRESS1 = 0x29
 
-def reader(debug):
-    bno = pi_steer.bno08x.BNO08X(debug)
-    global heading
-    global roll
-    global pitch
+class IMU():
+    def __init__(self, debug=False):
+        if debug:
+            db.write('Starting IMU')
+        self.debug = debug
+        address = 0
+        self.device = None
+        self.poll_delay = 1 # 0.01
+        self.device = pi_steer.bno055.BNO055(BNO055_ADDRESS0, debug)
+        if debug:
+            db.write('Imu address and device {} {}'.format(address, self.device) )
 
-    while True:
-        tic = time.time()
-        try:
-            (_heading, _roll, _pitch) = bno.read()
-            heading = _heading
-            if _roll > MAXIMUM_ROLL:
-                _roll = MAXIMUM_ROLL
-            if _roll < -MAXIMUM_ROLL:
-                _roll = -MAXIMUM_ROLL
-            roll = _roll
-            pitch = _pitch
-
-        except Exception as err:
-            # pass
-            print('IMU read failed', err)
-        # print('Imu read took: ', time.time()-tic, 's.')
-        time.sleep(0.01)
-
-def start(debug):
-    threading.Thread(target=reader, args=(debug,)).start()
+    def read(self):
+        if self.device:
+            qn = None
+            try:
+                qn = self.device.quaternion()
+            except OSError as err:
+                if self.debug:
+                    db.write(str(err))
+            if qn is None:
+                return None
+            else:
+                (qw, qx, qy, qz) = qn
+            if self.debug:
+                db.write('Quaternion {} {} {} {}'.format(qw, qx, qy, qz) )
+            (heading, roll, pitch) = pi_steer.quaternion.quaternion_to_euler(qw, qx, qy, qz, self.debug)
+            if self.debug:
+                db.write('Heading {}, roll {}, pitch {}'.format(heading, roll, pitch) )
+            return (heading, roll, pitch)
+        return None

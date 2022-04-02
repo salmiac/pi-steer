@@ -1,14 +1,15 @@
 import time
 import threading
-import pi_steer.cytron_md13s as pwm
+import pi_steer.pwm_motor as pwm
+import pi_steer.debug as db
 import gpiozero
 
 ANGLE_GAIN = 1 # 10 degrees = full power * gain %
 
 class MotorControl(): 
-    def __init__(self, settings, was):
+    def __init__(self, settings, debug=False):
         self.settings = settings
-        self.was = was
+        self.debug = debug
         self.running = False
         self.value_changed = True
         self.direction = 1 # 1 = right, 0 = left
@@ -18,11 +19,9 @@ class MotorControl():
         self.active_led = gpiozero.DigitalOutputDevice('BOARD15', active_high=False, initial_value=False)
         self.direction_led = gpiozero.DigitalOutputDevice('BOARD24', active_high=False, initial_value=False)
         self.pwm_value = 0
-        self.moe = 0
-        threading.Thread(target=self.update_motor).start()
 
-    def calculate_pwm(self):
-        delta_angle = self.target_angle - self.was.angle
+    def calculate_pwm(self, wheel_angle):
+        delta_angle = self.target_angle - wheel_angle
         pwm_value = delta_angle * self.settings.settings['gainP'] * ANGLE_GAIN
         if pwm_value < 0:
             pwm_value = -pwm_value
@@ -38,7 +37,7 @@ class MotorControl():
             self.pwm_value = pwm_value
             self.direction = direction
 
-    def update_motor(self):
+    def update_motor(self, wheel_angle):
         print('Start motor controller.')
         while True:
             self.moe += 1
@@ -53,19 +52,23 @@ class MotorControl():
                 stop = True
 
             if self.running or start:
-                self.calculate_pwm()
+                self.calculate_pwm(wheel_angle)
             if stop:
-                print('Stop!')
+                if self.debug:
+                    db.write('Stop!')
                 pwm.stop()
                 self.pwm_value = 0
                 self.running = False
                 continue
             if self.value_changed:
                 self.value_changed = False
-                # print('Set: pwm:', self.pwm_value, ', switch: ', self.switch.value, ', direction:', self.direction, ', wheel angle:', wheel_angle)
+                if self.debug:
+                    db.write('Set: pwm: {}, switch: {}, direction: {}'.format(self.pwm_value, self.switch_active, self.direction))
                 pwm.update(self.pwm_value, self.direction)
                 self.direction_led.value = self.direction
             if start:
+                if self.debug:
+                    db.write('Stop!')
                 print('Start!')
                 pwm.start()
                 self.running = True
@@ -82,7 +85,6 @@ class MotorControl():
             self.ok_to_run = True
         else:
             self.ok_to_run = False
-        # print(self.moe, self.switch.value, self.pwm_value, self.direction)
 
     def pwm_display(self):
         return int(self.pwm_value * 2.55)

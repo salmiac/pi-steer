@@ -41,20 +41,21 @@ def update(value, direction):
 '''
 The following code is much cleaner, but it uses software PWM and higher frequencies cannot be used.
 It is here jus as a reminder.
+
+import gpiozero
+FREQUENCY = 300
+
+pwm_direction = gpiozero.DigitalOutputDevice('BOARD22', active_high=True, initial_value=True)
+pwm = gpiozero.PWMOutputDevice('BOARD32', active_high=True, initial_value=0, frequency=FREQUENCY)
+
+def start():
+    pwm.on()
+
+def stop():
+    pwm.off()
+
+def update(value, direction):
+    pwm.value = value / 100.0
+    # print('PWM', pwm.value)
+    pwm_direction.value = direction
 '''
-# import gpiozero
-# FREQUENCY = 300
-
-# pwm_direction = gpiozero.DigitalOutputDevice('BOARD22', active_high=True, initial_value=True)
-# pwm = gpiozero.PWMOutputDevice('BOARD32', active_high=True, initial_value=0, frequency=FREQUENCY)
-
-# def start():
-#     pwm.on()
-
-# def stop():
-#     pwm.off()
-
-# def update(value, direction):
-#     pwm.value = value / 100.0
-#     # print('PWM', pwm.value)
-#     pwm_direction.value = direction

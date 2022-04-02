@@ -1,42 +1,24 @@
-from board import SCL, SDA
-from busio import I2C
 import time
-import adafruit_ads1x15.ads1115 as ADS
-from adafruit_ads1x15.analog_in import AnalogIn
-from adafruit_ads1x15.ads1x15 import Mode
+import time
+import struct
+import smbus
+import pi_steer.debug as db
 
-def init(i2c):
-    print('Init ADS1115')
-
-    try:
-        ads = ADS.ADS1115(i2c)
-        ads.mode = Mode.CONTINUOUS
-    except Exception as err:
-        print('ADS1115 failed', err)
-        return None
-    return ads
+_CONVERSION_REGISTER = 0x00
+_CONFIG_REGISTER = 0x01
+_CONFIGURATION = 0b0100_0100_1010_0011
 
 class ADS1115():
-    def __init__(self):
-        while True:
-            try:
-                i2c = I2C(SCL, SDA, frequency=40000)
-            except Exception as err:
-                print('I2C failed', err)
-                continue
-            break
+    def __init__(self, address, debug=False):
+        self.i2c = smbus.SMBus(1)
+        self.address = address 
+        self.debug = debug
 
-        self.ads = init(i2c)
-        self.i2c = i2c
+        self.i2c.write_i2c_block_data(self.address, _CONFIG_REGISTER, bytearray([0b0100_0010, 0b1010_0011]))
+        time.sleep(0.1)
+        if debug:
+            db.write('ADS1115 configuration {}'.format(self.i2c.read_i2c_block_data(self.address, _CONFIG_REGISTER, 2)))
 
     def read(self):
-        while True:
-            try:
-                chan = AnalogIn(self.ads, ADS.P0)
-            except Exception as err:
-                print('ADS1115 Read failed', err)
-                time.sleep(0.01)
-                self.ads = init(self.i2c)
-                continue
-        
-            return chan.voltage
+        data = self.i2c.read_i2c_block_data(self.address, _CONVERSION_REGISTER, 2)
+        return struct.unpack('>h', data )[0]

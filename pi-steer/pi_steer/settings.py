@@ -1,7 +1,8 @@
 import json
+import pi_steer.debug as db
 
 class Settings(): 
-    def __init__(self):
+    def __init__(self, debug) -> None:
         self.settings = {
             'gainP': 50,
             'highPWM': 120,
@@ -21,17 +22,25 @@ class Settings():
             'pressureSensor': 0,
             'currentSensor': 0,
         }
+        self.debug = debug
 
         try:
             with open('settings.json') as json_file:
                 self.settings.update(json.load(json_file))
         except FileNotFoundError:
+            if self.debug:
+                db.write('Read file error')
             self.save_settings()
 
     def save_settings(self):
+        if self.debug:
+            db.write('Save settings')
         try:
             with open('settings.json', 'w') as writer:
                 json.dump(self.settings, writer)
-        except:
-            pass
+        except Exception as err:
+            if self.debug:
+                db.write(str(err))
+        if self.debug:
+            db.write('Save settings ok')
 

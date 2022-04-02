@@ -137,14 +137,18 @@ def decode_data(data):
     )
 
 def main():
-    client=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)#, socket.IPPROTO_UDP)
+    print('Init')
+    client=socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #, socket.IPPROTO_UDP)
     client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     client.bind(('', 8888))
     while True:
         (data, address)=client.recvfrom(1024)
+        if data[3] in [ 0xfe, 0xef]:
+            continue
         print(binascii.hexlify(data, '-'), address)
         if data[0] == 0x80 and data[1] == 0x81:
-            decode_data(data)
+            pass
+            # decode_data(data)
 
 if __name__ == "__main__":
     main()

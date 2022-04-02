@@ -1,6 +1,5 @@
 import time
-import pi_steer.cytron_md13s as pwm
-
+import pi_steer.pwm_motor as pwm
 
 print('Start PWM test\n')
 

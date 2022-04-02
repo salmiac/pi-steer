@@ -24,6 +24,7 @@ sudo apt-get upgrade
 sudo apt-get install python3-pip
 sudo pip3 install adafruit-circuitpython-ads1x15
 sudo pip3 install adafruit-circuitpython-bno08x
+sudo pip install smbus2
 ```
 
 enable i2C interface
@@ -38,23 +39,23 @@ edit `/boot/config.txt` Add the line `dtoverlay=pwm-2chan,pin=12,func=4,pin2=13,
 |BSS138, BNO085|VCC|3v3 Power|1|2|5V Power|VCC|BSS138, RTY120LVNAA|
 |BSS138, BNO085|A2, SDA|I2C SDA|3|4|5V Power|||
 |BSS138, BNO085|A1, SCL|I2C SCL|5|6|Ground|GND|Cytron|
-|||GPIO 4|7|8|GPIO 14|||
-|BNO085|GND|Ground|9|10|GPIO 15|||
-|BNO085|RST|GPIO 17|11|12|GPIO 18|||
+|Relay|0|GPIO 4|7|8|GPIO 14|13|Relay|
+|BNO085|GND|Ground|9|10|GPIO 15|12|Relay|
+|BNO085|RST|GPIO 17|11|12|GPIO 18|11|Relay|
 |Autosteer switch|A|GPIO 27|13|14|Ground|GND|ADS1115|
 |Autosteer activated LED|-|GPIO 22|15|16|GPIO 23|-|Program activity LED|
-|LED:s|+|3v3 Power|17|18|GPIO 24|||
-|||GPIO 10|19|20|Ground|-|Power LED|
-|||GPIO 9|21|22|GPIO 25|DIR|Cytron|
-|||GPIO 11|23|24|GPIO 8|-|Motor direction LED|
-|Autosteer switch|B|Ground|25|26|GPIO 7|||
-|||GPIO 0|27|28|GPIO 1|||
-|||GPIO 5|29|30|Ground|GND|BSS138|
-|||GPIO 6|31|32|GPIO 12, PWM 0|PWM|Cytron|
-|||GPIO 13|33|34|Ground|||
-|||GPIO 19|35|36|GPIO 16|||
-|||GPIO 20|37|38|GPIO 20|||
-|RTY120LVNAA|GND|Ground|39|40|GPIO 21|||
+|LED:s|+|3v3 Power|17|18|GPIO 24|10|Relay|
+|Relay|1|GPIO 10|19|20|Ground|-|Power LED|
+|Relay|2|GPIO 9|21|22|GPIO 25|DIR|Cytron|
+|Relay|3|GPIO 11|23|24|GPIO 8|-|Motor direction LED|
+|Autosteer switch|B|Ground|25|26|GPIO 7|9|Relay|
+|Relay|14|GPIO 0|27|28|GPIO 1|15|Relay|
+|Relay|4|GPIO 5|29|30|Ground|GND|BSS138|
+|Relay|5|GPIO 6|31|32|GPIO 12, PWM 0|PWM|Cytron|
+|Work switch||GPIO 13|33|34|Ground|||
+|Autosteer switch||GPIO 19|35|36|GPIO 16|8|Relay|
+|Relay mode switch||GPIO 20|37|38|GPIO 20|7|Relay|
+|RTY120LVNAA|GND|Ground|39|40|GPIO 21|6|Relay|
 
 ## Wheel angle sensor **RTY120LVNAA**
 |Function|pin|

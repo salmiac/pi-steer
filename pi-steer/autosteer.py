@@ -2,28 +2,19 @@ import time
 import sys
 import threading
 import getopt
-
-import pi_steer.imu as imu
+import gpiozero
+import pi_steer.imu
 import pi_steer.agio
 import pi_steer.settings
 import pi_steer.motor_control
 import pi_steer.was
-import pi_steer.activity_led
+import pico_steer.debug as db
 
-def agio_reader(agio, settings, motor_control):
-    while True:
-        (pgn, payload) = agio.read()
-        if pgn is not None:
-            if pgn == 0xfb:
-                settings.settings.update(payload)
-                settings.save_settings()
-            if pgn == 0xfc:
-                settings.settings.update(payload)
-                settings.save_settings()
-            if pgn == 0xfe:
-                motor_control.set_control(payload)
 
 def main(argv):
+    activity_led = gpiozero.DigitalOutputDevice(23, active_high=False, initial_value=False)
+    work_switch = gpiozero.DigitalInputDevice(19, pull_up=True, active_state=False)
+
     try:
         options, arguments = getopt.getopt(argv, "d")
     except getopt.GetoptError:
@@ -36,33 +27,49 @@ def main(argv):
         print('Debug on')
         debug = True
 
-    imu.start(debug)
-    settings = pi_steer.settings.Settings()
-    was = pi_steer.was.WAS(settings)
-    agio = pi_steer.agio.AgIO(settings)
-    motor_control = pi_steer.motor_control.MotorControl(settings, was)
+    imu = pi_steer.imu.IMU(debug=debug)
+    settings = pi_steer.settings.Settings(debug=debug)
+    was = pi_steer.was.WAS(settings, debug=debug)
+    agio = pi_steer.agio.AgIO(settings, debug=debug)
+    motor_control = pi_steer.motor_control.MotorControl(settings, motor_control, debug=debug)
 
-    threading.Thread(target=agio_reader, args=(agio, settings, motor_control,)).start()
+    # threading.Thread(target=agio_reader, args=(agio, settings, motor_control,)).start()
+    blinker = 0
+    if debug:
+        db.write('Start loop.')
 
     while True:
-        # print('\r H {: = 7.2f} R {: = 7.2f}'.format(imu.heading, imu.roll), end='')
-        # agio.alive()
-        if motor_control.switch.value:
-            switch = 0x00
+        blinker += 1
+        agio.read()
+        imu_reading = imu.read()
+        wheel_angle = was.read()
+
+        if imu_reading is not None and wheel_angle is not None:
+            (heading, roll, pitch) = imu_reading
+            motor_control.update_motor(wheel_angle)
+            if motor_control.switch_active:
+                switch = 0b1111_1101
+            else:
+                switch = 0b1111_1111
+            if work_switch.value() == 0:
+                switch &= 0b1111_1110
+            
+            agio.from_autosteer(wheel_angle, heading, roll, switch, motor_control.pwm_display())
+
         else:
-            switch = 0xff
-        heading = imu.heading # 0 # Disable heading
-        roll = imu.roll # 0
-        
-        agio.from_autosteer(was.angle, heading, roll, switch, motor_control.pwm_display())
-        time.sleep(0.02)
+            agio.alive()
+
+        time.sleep(0.01)
+        if blinker % 32 == 0:
+            if debug:
+                db.write('.')
+            activity_led.toggle()
+
 
 if __name__ == '__main__':
     try:
         main(sys.argv[1:])
     except KeyboardInterrupt as e:
         print(e)
-        # pwm.stop()
-        # GPIO.cleanup()
         sys.exit(0)
 
