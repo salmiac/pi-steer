@@ -8,12 +8,12 @@ import pi_steer.agio
 import pi_steer.settings
 import pi_steer.motor_control
 import pi_steer.was
-import pico_steer.debug as db
+import pi_steer.debug as db
 
 
 def main(argv):
     activity_led = gpiozero.DigitalOutputDevice(23, active_high=False, initial_value=False)
-    work_switch = gpiozero.DigitalInputDevice(19, pull_up=True, active_state=False)
+    work_switch = gpiozero.DigitalInputDevice(19, pull_up=True)
 
     try:
         options, arguments = getopt.getopt(argv, "d")
@@ -27,11 +27,11 @@ def main(argv):
         print('Debug on')
         debug = True
 
-    imu = pi_steer.imu.IMU(debug=debug)
+    imu = pi_steer.imu.IMU(debug=False)
     settings = pi_steer.settings.Settings(debug=debug)
-    was = pi_steer.was.WAS(settings, debug=debug)
-    agio = pi_steer.agio.AgIO(settings, debug=debug)
-    motor_control = pi_steer.motor_control.MotorControl(settings, motor_control, debug=debug)
+    was = pi_steer.was.WAS(settings, debug=False)
+    motor_control = pi_steer.motor_control.MotorControl(settings, debug=debug)
+    agio = pi_steer.agio.AgIO(settings, motor_control, debug=False)
 
     # threading.Thread(target=agio_reader, args=(agio, settings, motor_control,)).start()
     blinker = 0
@@ -40,18 +40,17 @@ def main(argv):
 
     while True:
         blinker += 1
-        agio.read()
         imu_reading = imu.read()
         wheel_angle = was.read()
 
-        if imu_reading is not None and wheel_angle is not None:
+        if imu_reading is not None and imu_reading[0] is not None and wheel_angle is not None:
             (heading, roll, pitch) = imu_reading
             motor_control.update_motor(wheel_angle)
-            if motor_control.switch_active:
+            if motor_control.switch.value:
                 switch = 0b1111_1101
             else:
                 switch = 0b1111_1111
-            if work_switch.value() == 0:
+            if work_switch.value == 0:
                 switch &= 0b1111_1110
             
             agio.from_autosteer(wheel_angle, heading, roll, switch, motor_control.pwm_display())

@@ -2,7 +2,7 @@ import json
 import pi_steer.debug as db
 
 class Settings(): 
-    def __init__(self, debug) -> None:
+    def __init__(self, debug=False) -> None:
         self.settings = {
             'gainP': 50,
             'highPWM': 120,

@@ -14,11 +14,11 @@ class ADS1115():
         self.address = address 
         self.debug = debug
 
-        self.i2c.write_i2c_block_data(self.address, _CONFIG_REGISTER, bytearray([0b0100_0010, 0b1010_0011]))
+        self.i2c.write_i2c_block_data(self.address, _CONFIG_REGISTER, [0b0100_0010, 0b1010_0011])
         time.sleep(0.1)
         if debug:
             db.write('ADS1115 configuration {}'.format(self.i2c.read_i2c_block_data(self.address, _CONFIG_REGISTER, 2)))
 
     def read(self):
         data = self.i2c.read_i2c_block_data(self.address, _CONVERSION_REGISTER, 2)
-        return struct.unpack('>h', data )[0]
+        return struct.unpack('>h', bytes(data) )[0]

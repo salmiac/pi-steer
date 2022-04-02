@@ -62,7 +62,7 @@ class BNO055():
 
     def _write_config(self, register, value):
         time.sleep(0.02)
-        self.i2c.write_i2c_block_data(self.address, register, bytes(bytearray([value])))
+        self.i2c.write_i2c_block_data(self.address, register, [value])
         time.sleep(0.1)
 
 
@@ -72,5 +72,5 @@ class BNO055():
     def quaternion(self):
         if self.address:
             scale = 1.0 / (1 << 14)
-            return tuple(scale * value for value in struct.unpack('<hhhh', self._read(self.address, _QUATERNION_REGISTER, 8)))
-        
+            return tuple(scale * value for value in struct.unpack('<hhhh', bytes(self._read(self.address, _QUATERNION_REGISTER, 8))))
+

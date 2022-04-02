@@ -1,7 +1,9 @@
+import time
 import pi_steer.debug as db
-import pi_steer.debug as db
+import pi_steer.section_control
 import socket
 import struct
+import threading
 
 _HELLO = 0xc7
 _LATLON = 0xd0
@@ -173,18 +175,26 @@ pgn_data = {
 alive = [0x80,0x81, 0x7f, 0xC7, 1, 0, 0x47]
 
 class AgIO():
-    def __init__(self, settings, debug=False):
-        self.debug=False
+    def __init__(self, settings, motor_control, debug=False):
+        self.debug=debug
+        self.motor_control=motor_control
         self.settings = settings
+        self.sc = pi_steer.section_control.SectionControl()
         self.server=socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.server.bind(('', 8888))
-        self.server.settimeout(2)
-        self.server.setblocking(0)
+        self.server.settimeout(0.1)
 
         self.client=socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        self.client.settimeout(0.2)
+        self.client.settimeout(0)
+        self.client.setblocking(0)
+
+        self.reader_thread = threading.Thread(target=self.read)
+        self.reader_thread.start()
+
+    def __del__(self):
+        self.reader_thread.join(0)
 
     def decode_data(self, data):
         try:
@@ -219,18 +229,20 @@ class AgIO():
             self._pgn_handler(pgn, payload)
 
     def read(self) -> None:
-        try:
-            while True:
-                (data, address)=self.server.recvfrom(1024)
-                if len(data) < 6:
-                    continue
-                if data[0] == 0x80 and data[1] == 0x81:
-                    self.decode_data(data)
-        except socket.error as err:
-            if self.debug:
-                db.write('Read socket error: {}'.format(err))
-        except socket.timeout as err:
-            pass
+        while True:
+            try:
+                while True:
+                    (data, address)=self.server.recvfrom(1024)
+                    if len(data) < 6:
+                        continue
+                    if data[0] == 0x80 and data[1] == 0x81:
+                        self.decode_data(data)
+            except socket.error as err:
+                if self.debug:
+                    db.write('Read socket error: {}'.format(err))
+            except socket.timeout as err:
+                if self.debug:
+                    db.write('Read socket timeout: {}'.format(err))
 
     def _pgn_handler(self, pgn, payload) -> None:
         if pgn is not None:

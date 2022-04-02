@@ -17,19 +17,24 @@ Why Raspberry Pi? It's just somethin I had laying around.
 
 ### Install
 
-From fresh Raspberry PI OS Lite.
+From fresh Raspberry PI OS.
 ```
 sudo apt-get update
 sudo apt-get upgrade
-sudo apt-get install python3-pip
-sudo pip3 install adafruit-circuitpython-ads1x15
-sudo pip3 install adafruit-circuitpython-bno08x
 sudo pip install smbus2
 ```
 
 enable i2C interface
 
 `sudo raspi-config`
+
+edit `/boot/config.txt`
+
+`sudo nano /boot/config.txt`
+
+Add the line `dtoverlay=pwm-2chan,pin=12,func=4,pin2=13,func2=4`
+Save the file and reboot.
+
 
 edit `/boot/config.txt` Add the line `dtoverlay=pwm-2chan,pin=12,func=4,pin2=13,func2=4` Save the file and reboot.
 
@@ -54,7 +59,7 @@ edit `/boot/config.txt` Add the line `dtoverlay=pwm-2chan,pin=12,func=4,pin2=13,
 |Relay|5|GPIO 6|31|32|GPIO 12, PWM 0|PWM|Cytron|
 |Work switch||GPIO 13|33|34|Ground|||
 |Autosteer switch||GPIO 19|35|36|GPIO 16|8|Relay|
-|Relay mode switch||GPIO 20|37|38|GPIO 20|7|Relay|
+|Relay mode switch||GPIO 26|37|38|GPIO 20|7|Relay|
 |RTY120LVNAA|GND|Ground|39|40|GPIO 21|6|Relay|
 
 ## Wheel angle sensor **RTY120LVNAA**

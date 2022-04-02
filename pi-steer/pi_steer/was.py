@@ -10,10 +10,10 @@ class WAS():
     def __init__(self, settings, debug=False) -> None:
         self.settings = settings
         self.debug = debug
-        address = 0
+        address = _ADS111X_ADDRESS0
         self.device = None
         if address:
-            self.device = pi_steer.ads1115.ADS1115(_ADS111X_ADDRESS0, self.debug)
+            self.device = pi_steer.ads1115.ADS1115(address, self.debug)
 
     def read(self):
         if self.device:

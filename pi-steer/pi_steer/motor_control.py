@@ -38,41 +38,36 @@ class MotorControl():
             self.direction = direction
 
     def update_motor(self, wheel_angle):
-        print('Start motor controller.')
-        while True:
-            self.moe += 1
-            self.active_led.value = self.switch.value
-            start = False
-            stop = False
+        self.active_led.value = self.switch.value
+        start = False
+        stop = False
 
-            self.was.read()
-            if self.switch.value == 1 and not self.running and self.ok_to_run:
-                start = True
-            if self.running and (self.switch.value == 0 or not self.ok_to_run):
-                stop = True
+        if self.switch.value == 1 and not self.running and self.ok_to_run:
+            start = True
+        if self.running and (self.switch.value == 0 or not self.ok_to_run):
+            stop = True
 
-            if self.running or start:
-                self.calculate_pwm(wheel_angle)
-            if stop:
-                if self.debug:
-                    db.write('Stop!')
-                pwm.stop()
-                self.pwm_value = 0
-                self.running = False
-                continue
-            if self.value_changed:
-                self.value_changed = False
-                if self.debug:
-                    db.write('Set: pwm: {}, switch: {}, direction: {}'.format(self.pwm_value, self.switch_active, self.direction))
-                pwm.update(self.pwm_value, self.direction)
-                self.direction_led.value = self.direction
-            if start:
-                if self.debug:
-                    db.write('Stop!')
-                print('Start!')
-                pwm.start()
-                self.running = True
-            time.sleep(0.005)
+        if self.running or start:
+            self.calculate_pwm(wheel_angle)
+        if stop:
+            if self.debug:
+                db.write('Stop!')
+            pwm.stop()
+            self.pwm_value = 0
+            self.running = False
+            return
+        if self.value_changed:
+            self.value_changed = False
+            if self.debug:
+                db.write('Set: pwm: {}, switch: {}, direction: {}'.format(self.pwm_value, self.switch.value, self.direction))
+            pwm.update(self.pwm_value, self.direction)
+            self.direction_led.value = self.direction
+        if start:
+            if self.debug:
+                db.write('Start!')
+            pwm.start()
+            self.running = True
+        time.sleep(0.005)
 
     def set_control(self, auto_steer_data):
         # auto_steer_data['Speed']
