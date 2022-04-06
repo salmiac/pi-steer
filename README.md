@@ -21,29 +21,29 @@ From fresh Raspberry PI OS.
 ```
 sudo apt-get update
 sudo apt-get upgrade
+sudo apt-get install pip
 sudo pip install smbus2
 ```
 
-enable i2C interface
+Configure raspberry:
+```
+sudo raspi-config
+```
+From System Options set Wireless LAN, from Interface Options enable I2C, 
 
-`sudo raspi-config`
-
-edit `/boot/config.txt`
-
-`sudo nano /boot/config.txt`
-
+Edit `/boot/config.txt`
+```
+sudo nano /boot/config.txt
+```
 Add the line `dtoverlay=pwm-2chan,pin=12,func=4,pin2=13,func2=4`
 Save the file and reboot.
-
-
-edit `/boot/config.txt` Add the line `dtoverlay=pwm-2chan,pin=12,func=4,pin2=13,func2=4` Save the file and reboot.
 
 ## Raspberry Pi pinout
 |Device|pin|Pi GPIO|Pi pin|Pi pin|Pi GPIO|pin|Device|
 |--|--|--|--|--|--|--|--|
-|BSS138, BNO085|VCC|3v3 Power|1|2|5V Power|VCC|BSS138, RTY120LVNAA|
-|BSS138, BNO085|A2, SDA|I2C SDA|3|4|5V Power|||
-|BSS138, BNO085|A1, SCL|I2C SCL|5|6|Ground|GND|Cytron|
+|BSS138, BNO085|VCC|3v3 Power|1|2|5V Power|VCC|BSS138|
+|BSS138, BNO085|A2, SDA|I2C SDA|3|4|5V Power|VCC|RTY120LVNAA|
+|BSS138, BNO085|A1, SCL|I2C SCL|5|6|Ground|||
 |Relay|0|GPIO 4|7|8|GPIO 14|13|Relay|
 |BNO085|GND|Ground|9|10|GPIO 15|12|Relay|
 |BNO085|RST|GPIO 17|11|12|GPIO 18|11|Relay|
@@ -57,7 +57,7 @@ edit `/boot/config.txt` Add the line `dtoverlay=pwm-2chan,pin=12,func=4,pin2=13,
 |Relay|14|GPIO 0|27|28|GPIO 1|15|Relay|
 |Relay|4|GPIO 5|29|30|Ground|GND|BSS138|
 |Relay|5|GPIO 6|31|32|GPIO 12, PWM 0|PWM|Cytron|
-|Work switch||GPIO 13|33|34|Ground|||
+|Work switch||GPIO 13|33|34|Ground|GND|Cytron|
 |Autosteer switch||GPIO 19|35|36|GPIO 16|8|Relay|
 |Relay mode switch||GPIO 26|37|38|GPIO 20|7|Relay|
 |RTY120LVNAA|GND|Ground|39|40|GPIO 21|6|Relay|
@@ -88,7 +88,9 @@ Wires connectedd to raspberry Pi via level converter
 |Ground|20|GND|GND|3|
 |||A0||2|
 
-## Adafruit BNO085 Absolute Orientation Sensor
+### Inertial masurement unit (IMU)
+Connected via I2C 
+
 Wires connectedd to raspberry Pi.
 |GPIO|Pi pin number|BNO085|
 |--|--|--|
@@ -96,6 +98,20 @@ Wires connectedd to raspberry Pi.
 |I2C1 SDA|3|SDA|
 |I2C1 SCL|5|SCL|
 |Ground|9|GND|
+
+https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+
+#### BNO055 
+
+https://github.com/adafruit/Adafruit_BNO055
+
+https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bno055-ds000.pdf
+
+#### BNO085
+
+https://learn.adafruit.com/adafruit-9-dof-orientation-imu-fusion-breakout-bno085
+
+https://www.ceva-dsp.com/wp-content/uploads/2019/10/BNO080_085-Datasheet.pdf
 
 ## Motor controller Cytron MD13S
 https://docs.google.com/document/d/1icu1GVDxZhUn3ADSUc3JknNcmUMdPcsnJ4MhxOPRo-I/view
