@@ -33,6 +33,8 @@ class IMU():
             if self.debug:
                 db.write('Quaternion {} {} {} {}'.format(qw, qx, qy, qz) )
             (heading, roll, pitch) = pi_steer.quaternion.quaternion_to_euler(qw, qx, qy, qz, self.debug)
+            if heading is None:
+                return None
             if self.debug:
                 db.write('Heading {}, roll {}, pitch {}'.format(heading, roll, pitch) )
             return (heading, roll, pitch)

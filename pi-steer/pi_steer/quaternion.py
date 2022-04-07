@@ -2,6 +2,12 @@ import math
 import pi_steer.debug as db
 
 def quaternion_to_euler(qw, qx, qy, qz, debug=False):
+    # Norm should always be 1, or very close to 1
+    norm = math.sqrt(qw*qw + qx*qx + qy*qy + qz*qz)
+    norm_error = abs(1 - norm)
+    if norm_error > 0.01:
+        db.write('Quaternion Norm error {}'.format(norm))
+        return (None, None, None)
     sinr_cosp = 2 * (qw * qx + qy * qz)
     cosr_cosp = 1 - 2 * (qx * qx + qy * qy)
     roll = math.degrees(math.atan2(sinr_cosp, cosr_cosp))
