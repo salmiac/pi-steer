@@ -15,9 +15,7 @@ class MotorControl():
         self.direction = 1 # 1 = right, 0 = left
         self.target_angle = 0
         self.ok_to_run = False
-        self.switch = gpiozero.DigitalInputDevice('BOARD13', pull_up=True, active_state=None, bounce_time=None)
-        self.active_led = gpiozero.DigitalOutputDevice('BOARD15', active_high=False, initial_value=False)
-        self.direction_led = gpiozero.DigitalOutputDevice('BOARD24', active_high=False, initial_value=False)
+        self.switch = gpiozero.DigitalInputDevice(27, pull_up=True, active_state=None, bounce_time=None)
         self.pwm_value = 0
 
     def calculate_pwm(self, wheel_angle):
@@ -38,7 +36,6 @@ class MotorControl():
             self.direction = direction
 
     def update_motor(self, wheel_angle):
-        self.active_led.value = self.switch.value
         start = False
         stop = False
 
@@ -61,7 +58,6 @@ class MotorControl():
             if self.debug:
                 db.write('Set: pwm: {}, switch: {}, direction: {}'.format(self.pwm_value, self.switch.value, self.direction))
             pwm.update(self.pwm_value, self.direction)
-            self.direction_led.value = self.direction
         if start:
             if self.debug:
                 db.write('Start!')

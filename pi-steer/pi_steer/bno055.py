@@ -1,7 +1,7 @@
 import time
 import struct
 import pi_steer.debug as db
-import smbus
+import smbus2
 
 CONFIG_MODE = 0x00
 ACCONLY_MODE = 0x01
@@ -39,7 +39,7 @@ _AXIS_MAP_SIGN_REGISTER = 0x42
 
 class BNO055():
     def __init__(self, address, debug=False):
-        self.i2c = smbus.SMBus(1)
+        self.i2c = smbus2.SMBus(1)
         self.address = address 
         self.debug = debug
 

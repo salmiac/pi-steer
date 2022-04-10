@@ -1,7 +1,7 @@
 import time
 import time
 import struct
-import smbus
+import smbus2
 import pi_steer.debug as db
 
 _CONVERSION_REGISTER = 0x00
@@ -10,7 +10,7 @@ _CONFIGURATION = 0b0100_0100_1010_0011
 
 class ADS1115():
     def __init__(self, address, debug=False):
-        self.i2c = smbus.SMBus(1)
+        self.i2c = smbus2.SMBus(1)
         self.address = address 
         self.debug = debug
 

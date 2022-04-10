@@ -17,6 +17,25 @@ class IMU():
         self.device = pi_steer.bno055.BNO055(BNO055_ADDRESS0, debug)
         if debug:
             db.write('Imu address and device {} {}'.format(address, self.device) )
+        self.base_roll = 0
+        for n in range(20):
+            orientation = self.read()
+            if orientation is None:
+                continue
+            (heading, roll, pitch) = orientation
+            if roll is None:
+                continue
+            if -45 < roll < 45:
+                break
+            if -135 < roll < -45:
+                self.base_roll = -90
+                break
+            if 45 < roll < 135:
+                self.base_roll = 90
+                break
+            if roll > 135 or roll < -135:
+                self.base_roll = 180
+                break
 
     def read(self):
         if self.device:
@@ -35,6 +54,11 @@ class IMU():
             (heading, roll, pitch) = pi_steer.quaternion.quaternion_to_euler(qw, qx, qy, qz, self.debug)
             if heading is None:
                 return None
+            roll -= self.base_roll
+            if roll < -180:
+                roll += 360
+            if roll > 180:
+                roll -= 360
             if self.debug:
                 db.write('Heading {}, roll {}, pitch {}'.format(heading, roll, pitch) )
             return (heading, roll, pitch)

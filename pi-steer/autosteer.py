@@ -12,8 +12,7 @@ import pi_steer.debug as db
 
 
 def main(argv):
-    activity_led = gpiozero.DigitalOutputDevice(23, active_high=False, initial_value=False)
-    work_switch = gpiozero.DigitalInputDevice(19, pull_up=True)
+    work_switch = gpiozero.DigitalInputDevice(13, pull_up=True)
 
     try:
         options, arguments = getopt.getopt(argv, "d")
@@ -27,10 +26,10 @@ def main(argv):
         print('Debug on')
         debug = True
 
-    imu = pi_steer.imu.IMU(debug=False)
-    settings = pi_steer.settings.Settings(debug=debug)
+    imu = pi_steer.imu.IMU(debug=debug)
+    settings = pi_steer.settings.Settings(debug=False)
     was = pi_steer.was.WAS(settings, debug=False)
-    motor_control = pi_steer.motor_control.MotorControl(settings, debug=debug)
+    motor_control = pi_steer.motor_control.MotorControl(settings, debug=False)
     agio = pi_steer.agio.AgIO(settings, motor_control, debug=False)
 
     # threading.Thread(target=agio_reader, args=(agio, settings, motor_control,)).start()
@@ -62,7 +61,6 @@ def main(argv):
         if blinker % 32 == 0:
             if debug:
                 db.write('.')
-            activity_led.toggle()
 
 
 if __name__ == '__main__':

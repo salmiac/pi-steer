@@ -7,11 +7,6 @@ This just just for demonstration and proof of concept. This should never ever be
 ## Other documents
 Pictures and something [here](Documents/README.md).
 
-## Program 
-Run program by:
-
-`python3 pi-steer/autosteer.py`
-
 ## Raspberry Pi 3
 Why Raspberry Pi? It's just somethin I had laying around.
 
@@ -22,7 +17,7 @@ From fresh Raspberry PI OS.
 sudo apt-get update
 sudo apt-get upgrade
 sudo apt-get install pip
-sudo pip install smbus2
+pip install smbus2
 ```
 
 Configure raspberry:
@@ -38,29 +33,38 @@ sudo nano /boot/config.txt
 Add the line `dtoverlay=pwm-2chan,pin=12,func=4,pin2=13,func2=4`
 Save the file and reboot.
 
+## Run program 
+Run program by:
+
+`python pi-steer/autosteer.py`
+
+To start automatically at boot add followin line to `/etc/rc.0`
+`python pi-steer/autosteer.py &`
+
+
 ## Raspberry Pi pinout
 |Device|pin|Pi GPIO|Pi pin|Pi pin|Pi GPIO|pin|Device|
 |--|--|--|--|--|--|--|--|
-|BSS138, BNO085|VCC|3v3 Power|1|2|5V Power|VCC|BSS138|
-|BSS138, BNO085|A2, SDA|I2C SDA|3|4|5V Power|VCC|RTY120LVNAA|
-|BSS138, BNO085|A1, SCL|I2C SCL|5|6|Ground|||
-|Relay|0|GPIO 4|7|8|GPIO 14|13|Relay|
-|BNO085|GND|Ground|9|10|GPIO 15|12|Relay|
-|BNO085|RST|GPIO 17|11|12|GPIO 18|11|Relay|
-|Autosteer switch|A|GPIO 27|13|14|Ground|GND|ADS1115|
-|Autosteer activated LED|-|GPIO 22|15|16|GPIO 23|-|Program activity LED|
-|LED:s|+|3v3 Power|17|18|GPIO 24|10|Relay|
-|Relay|1|GPIO 10|19|20|Ground|-|Power LED|
-|Relay|2|GPIO 9|21|22|GPIO 25|DIR|Cytron|
-|Relay|3|GPIO 11|23|24|GPIO 8|-|Motor direction LED|
-|Autosteer switch|B|Ground|25|26|GPIO 7|9|Relay|
-|Relay|14|GPIO 0|27|28|GPIO 1|15|Relay|
-|Relay|4|GPIO 5|29|30|Ground|GND|BSS138|
-|Relay|5|GPIO 6|31|32|GPIO 12, PWM 0|PWM|Cytron|
+|BSS138, BNO085|LV, VIN|3v3 Power|1|2|5V Power|HV, VDD|BSS138, ADS1115|
+|BSS138, BNO085|A2, SDA|I2C SDA|3|4|5V Power|VCC, 1-A|RTY120LVNAA|
+|BSS138, BNO085|A1, SCL|I2C SCL|5|6|Ground|GND, 2-B|RTY120LVNAA|
+|Relay, up/down|up|GPIO 4|7|8|GPIO 14|TXD|reserver for GPS|
+|BNO085|GND|Ground|9|10|GPIO 15|RXD|reserver for GPS|
+|Relay, up/down|down|GPIO 17|11|12|GPIO 18|16|Relay|
+|Autosteer switch|A|GPIO 27|13|14|Ground|GND|Relay|
+|Relay|1|GPIO 22|15|16|GPIO 23|15|Relay|
+|LED:s|+|3v3 Power|17|18|GPIO 24|14|Relay|
+|Relay|2|GPIO 10|19|20|Ground|-|Power LED|
+|Relay|3|GPIO 9|21|22|GPIO 25|13|Relay|
+|Relay|4|GPIO 11|23|24|GPIO 8|12|Relay|
+|Autosteer switch|B|Ground|25|26|GPIO 7|11|Relay|
+|Relay|5|GPIO 0|27|28|GPIO 1|10|Relay|
+|Relay|6|GPIO 5|29|30|Ground|GND|BSS138|
+|Relay|7|GPIO 6|31|32|GPIO 12, PWM 0|PWM|Cytron|
 |Work switch||GPIO 13|33|34|Ground|GND|Cytron|
-|Autosteer switch||GPIO 19|35|36|GPIO 16|8|Relay|
-|Relay mode switch||GPIO 26|37|38|GPIO 20|7|Relay|
-|RTY120LVNAA|GND|Ground|39|40|GPIO 21|6|Relay|
+|Relay normal mode, switch|2|GPIO 19|35|36|GPIO 16|DIR|Cytron|
+|Relay up/down mode, switch|1|GPIO 26|37|38|GPIO 20|9|Relay|
+|Relay mode switch|GND|Ground|39|40|GPIO 21|8|Relay|
 
 ## Wheel angle sensor **RTY120LVNAA**
 |Function|pin|
@@ -82,11 +86,11 @@ Wires connectedd to raspberry Pi via level converter
 
 |GPIO|Pi pin number|ADS1115|BSS138|RTY120LVNAA|
 |--|--|--|--|--|
-|5V Power|4||VIN|1|
+|5V Power|4||VIN|1-A|
 |||SDA|B1||
 |||SCL|B2||
-|Ground|20|GND|GND|3|
-|||A0||2|
+|Ground|20|GND|GND|2-B|
+|||A0||3-C|
 
 ### Inertial masurement unit (IMU)
 Connected via I2C 
@@ -150,6 +154,22 @@ Leds are connected between 3.3 V power (pin 17) and control pins
 |GPIO 8|24|Motor direction|
 |GPIO 23|16|Program activity|
 |Ground|20|Power on|
+
+# Relays
+Pololu Basic 2-Channel SPDT Relay Carrier with 12VDC Relays
+https://www.pololu.com/product/2485
+
+|GPIO|Pi pin number|relay|12V|Output|
+|--|--|--|--|--|
+|GND|14|GND|||
+|||GND|GND|Out GND|
+|||VDD|+12 V||
+|GPIO 4|7|EN1|||
+|GPIO 17|11|EN2|||
+|||NO1||Output Up|
+|||NO2||Output Down|
+
+
 
 ## Section control
 Not implemented, sorry.
