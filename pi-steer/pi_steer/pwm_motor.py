@@ -1,6 +1,6 @@
 import time
 
-FREQUENCY = 2000
+FREQUENCY = 8000
 
 def write(file, command):
     try:
@@ -20,11 +20,11 @@ time.sleep(0.001)
 write('/sys/class/pwm/pwmchip0/pwm0/enable', '0')
 time.sleep(0.001)
 
-write('/sys/class/gpio/export', '25')
+write('/sys/class/gpio/export', '16')
 time.sleep(1)
-write('/sys/class/gpio/gpio25/direction', 'out')
+write('/sys/class/gpio/gpio16/direction', 'out')
 time.sleep(0.1)
-write('/sys/class/gpio/gpio25/value', '0')
+write('/sys/class/gpio/gpio16/value', '0')
 time.sleep(0.001)
 
 def start():
@@ -34,7 +34,7 @@ def stop():
     write('/sys/class/pwm/pwmchip0/pwm0/enable', '0')
 
 def update(value, direction):
-    write('/sys/class/gpio/gpio25/value', str(direction))
+    write('/sys/class/gpio/gpio16/value', str(direction))
     write('/sys/class/pwm/pwmchip0/pwm0/duty_cycle', str(int(1000000000/FREQUENCY * value / 100.0)))
 
 
