@@ -6,7 +6,7 @@ DELAY = 5
 relays = []
 relay_pins = [22, 10, 9, 11, 0, 5, 6, 21, 20, 1, 7, 8, 25, 24, 23, 18, 4, 17]
 
-for n in range(10):
+for n in range(18):
     relay = gpiozero.DigitalOutputDevice(relay_pins[n], active_high=True, initial_value=False)
     relays.append(relay)
 up_down_mode = gpiozero.DigitalInputDevice(26, pull_up=True)
