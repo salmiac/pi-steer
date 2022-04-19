@@ -37,6 +37,15 @@ _ID_REGISTER = 0x00
 _AXIS_MAP_CONFIG_REGISTER = 0x41
 _AXIS_MAP_SIGN_REGISTER = 0x42
 
+def find_bno055() -> int:
+    for address in [0x28, 0x29]:
+        try:
+            smbus2.SMBus(1).read_byte_data(address, 0)
+        except OSError:
+            continue
+        return address
+    return 0
+
 class BNO055():
     def __init__(self, address, debug=False):
         self.i2c = smbus2.SMBus(1)

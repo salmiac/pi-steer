@@ -7,4 +7,4 @@ def now():
 print('Start debugger')
 
 def write(text: str) -> None:
-    print('{} {}\n'.format(now(), text))
+    print('\n{} {}'.format(now(), text))

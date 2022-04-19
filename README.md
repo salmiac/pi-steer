@@ -18,6 +18,7 @@ sudo apt-get update
 sudo apt-get upgrade
 sudo apt-get install pip
 pip install smbus2
+pip install adafruit-circuitpython-bno08x
 ```
 
 Configure raspberry:

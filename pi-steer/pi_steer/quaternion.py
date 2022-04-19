@@ -2,6 +2,10 @@ import math
 import pi_steer.debug as db
 
 def quaternion_to_euler(qw, qx, qy, qz, debug=False):
+    # Value sanity check
+    if abs(qw) > 1 or abs(qx) > 1 or abs(qy) > 1 or abs(qz) > 1:
+        db.write('Value error: {} {} {} {}'.format(qx, qy, qz, qw) )
+        return (None, None, None)
     # Norm should always be 1, or very close to 1
     norm = math.sqrt(qw*qw + qx*qx + qy*qy + qz*qz)
     norm_error = abs(1 - norm)

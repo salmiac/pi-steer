@@ -1,9 +1,6 @@
-import math
+import sys
 import time
-import signal
 import pi_steer.log
-from gpiozero import DigitalOutputDevice
-from math import atan2, asin, pi, degrees
 from board import SCL, SDA
 from busio import I2C
 from adafruit_bno08x import (
@@ -38,15 +35,19 @@ FEATURES = [
 
 BNO_PACKET = BNO_REPORT_GAME_ROTATION_VECTOR
 
-reset = DigitalOutputDevice('BOARD11', active_high=False, initial_value=True)
+# reset = DigitalOutputDevice('BOARD11', active_high=False, initial_value=True)
 
-def timeout(signum, frame):
-    raise Exception('Timeout')
+BNO085 = [0x4a, 0x4b]
 
-signal.signal(signal.SIGALRM, timeout)
-
-def what(a, b):
-    print('slices', a,b)
+def find_bno085() -> int:
+    i2c = I2C(SCL, SDA)
+    for address in BNO085:
+        try:
+            BNO08X_I2C(i2c, address=address)
+        except ValueError:
+            continue
+        return address
+    return 0
 
 def now():
     return time.strftime('%X')
@@ -60,47 +61,20 @@ def enable_features(bno):
             return False
     return True
 
+'''
 def hard_reset():
     print(now(), 'BNO085 Hard reset')
     reset.on()
     time.sleep(0.1)
     reset.off()
     time.sleep(0.1)
-
-def init(i2c):
-    while True:
-        try:
-            print(now(), 'BNO085 try I2C address 0x4a')
-            bno = BNO08X_I2C(i2c, address=0x4a)
-        except:
-            try:
-                print(now(), 'BNO085 try I2C address 0x4b')
-                bno = BNO08X_I2C(i2c, address=0x4b)
-            except:
-                print(now(), 'BNO085 failed')
-                time.sleep(1)
-                hard_reset()
-                continue
-
-        try:
-            bno.initialize()
-        except:
-            print(now(), 'First initialization failed, try software hard reset:')
-            try:
-                bno.hard_reset()
-                bno.initialize()
-            except Exception as err:
-                print(now(), 'BNO085 initialization failed:', err)
-                return None
-
-        print(now(), 'BNO085 initialized.')
-        return bno
+'''
 
 class BNO08X():
-    def __init__(self, debug) -> None:
+    def __init__(self, address, debug) -> None:
         while True:
             try:
-                i2c = I2C(SCL, SDA, frequency=40000)
+                i2c = I2C(SCL, SDA, frequency=400000)
             except Exception as err:
                 print('I2C failed', err)
                 continue
@@ -113,28 +87,41 @@ class BNO08X():
             self.debug_euler = pi_steer.log.Log('bno08x euler')
             self.debug_error = pi_steer.log.Log('bno08x error')
         self.i2c = i2c
-        self.last_heading = None
-        self.heading_reference = 0
-        self.last_roll = 0
-        self.last_value = {'time': 0, 'qx': 0, 'qy': 0, 'qz': 0, 'qw': 0}
+        self.address = address
+        self.bno = None
         self.start()
 
+    def get_bno(self):
+        try:
+            self.bno = BNO08X_I2C(self.i2c, address=self.address)
+        except:
+            print(now(), 'BNO085 failed')
+
+
+    def init(self, i2c, address):
+        while True:
+            try:
+                self.bno.initialize()
+            except:
+                print(now(), 'First initialization failed, try software hard reset:')
+                try:
+                    # bno.hard_reset()
+                    self.bno.initialize()
+                except Exception as err:
+                    print(now(), 'BNO085 initialization failed:', err)
+                    return
+            print(now(), 'BNO085 initialized.')
+            return
+
     def start(self):
+        self.get_bno()
         print(now(), 'Init BNO085')
         while True:
             time.sleep(0.1)
-            bno = init(self.i2c)
-            bno.initialize()
+            self.init(self.i2c, self.address)
             time.sleep(0.1)
-            if not bno:
-                hard_reset()
+            if not enable_features(self.bno):
                 continue
-            if not enable_features(bno):
-                hard_reset()
-                continue
-            if self.last_heading is not None:
-                self.heading_reference = self.last_heading
-            self.bno = bno
             for discard in range(7):
                 try:
                     (qx, qy, qz, qw) = self.search_packet(BNO_PACKET)
@@ -144,108 +131,20 @@ class BNO08X():
 
             return
 
-    def read_single(self):
-        read_counter = 0
-        reset_counter = 0
-        value_counter = 0
-        while True:
-            if read_counter:
-                print(now(), 'BNO085 Read retry: ', read_counter)
-            if reset_counter:
-                print(now(), 'BNO085 Reset retry: ', reset_counter)
-            if value_counter:
-                pass
-                # print(now(), 'BNO085 value error: ', value_counter)
-            if self.bno is None:
-                time.sleep(1)
-                self.start()
-                continue
-            read_counter += 1
-            # signal.alarm(1)
-            try:
-                # (qx, qy, qz, qw) = self.bno.game_quaternion
-                (qx, qy, qz, qw) = self.search_packet(BNO_PACKET)
-                if self.debug:
-                    self.debug_data.log_csv([time.monotonic(), qx, qy, qz, qw])
-            except OSError as err:
-                print(now(), 'OSError reading packet', err)
-                hard_reset()
-                self.bno = None
-                time.sleep(0.1)
-                continue
-            except Exception as err:
-                print('BNO packet read error:', err)
-                # signal.alarm(0)
-                time.sleep(0.02)
-                if read_counter < 20:
-                    continue
-
-                read_counter = 0
-                reset_counter += 1
-
-                if reset_counter < 3:
-                    print(now(), 'BNO085 try soft reset\n')
-                    try:
-                        self.bno.soft_reset()
-                        print(now(), 'BNO085 soft reset done\n')
-                    except:
-                        print(now(), 'Soft reset failed\n')
-                    self.bno = None
-                    continue
-                hard_reset()
-                self.bno = None
-                time.sleep(0.1)
-                continue
-            # signal.alarm(0)
-
-            read_counter = 0
-            reset_counter = 0
-            if abs(qw) > 1 or abs(qx) > 1 or abs(qy) > 1 or abs(qz) > 1:
-                value_counter += 1
-                print(now(), 'Value error:', qx, qy, qz, qw )
-                # time.sleep(0.01)
-                continue
-            value_counter = 0
-            # Norm should always be 1, or very close to 1
-            norm = math.sqrt(qw*qw + qx*qx + qy*qy + qz*qz)
-            norm_error = abs(1 - norm)
-            if norm_error > 0.01:
-                print('Quaternion norm not 1', norm_error)
-                continue
-            return (qx/norm, qy/norm, qz/norm, qw/norm)
-
-    def read(self):
-        while True:
-            try:
-                (qx, qy, qz, qw) = self.read_single()
-            except Exception as err:
-                print(now(), 'Read error', err)
-                continue
-            
-            sinr_cosp = 2 * (qw * qx + qy * qz)
-            cosr_cosp = 1 - 2 * (qx * qx + qy * qy)
-            roll = degrees(atan2(sinr_cosp, cosr_cosp))
-
-            sinp = 2 * (qw * qy - qz * qx)
-            try:
-                pitch = asin(sinp)
-            except ValueError:
-                print(now(), 'Value error:', qx, qy, qz, qw )
-                time.sleep(0.01)
-                continue
-            pitch = degrees(pitch)
-
-            siny_cosp = 2 * (qw * qz + qx * qy)
-            cosy_cosp = 1 - 2 * (qy * qy + qz * qz)
-            heading = -degrees(atan2(siny_cosp, cosy_cosp))
-            heading = (heading + self.heading_reference) % 360
-            self.last_heading = heading
-
+    def quaternion(self):
+        try:
+            # (qx, qy, qz, qw) = self.bno.game_quaternion
+            (qx, qy, qz, qw) = self.search_packet(BNO_PACKET)
             if self.debug:
-                self.debug_euler.log_csv([time.monotonic(), heading, roll, pitch])
-
-            return (heading, roll, pitch)
-
+                self.debug_data.log_csv([time.monotonic(), qx, qy, qz, qw])
+        except OSError as err:
+            print(now(), '\nOSError reading packet', err)
+            return None
+        except Exception as err:
+            print('\nBNO packet read error:', err)
+            time.sleep(0.02)
+            return None
+        return (qw, qx, qy, qz)
 
     def search_packet(self, id=None):
         processed_count = 0
@@ -254,13 +153,15 @@ class BNO08X():
                 try:
                     new_packet = self.bno._read_packet()
                 except PacketError as err:
-                    print('Packet error', err)
+                    print('\nPacket error', err)
                     continue
                 packet_report_id = new_packet.data[5]
                 try:
                     self.bno._handle_packet(new_packet)
                 except Exception as err:
-                    print('packet handle error', err)
+                    print('\npacket handle error', err)
+                    # self.bno.soft_reset()
+                    enable_features(self.bno)
                     continue
                 processed_count += 1
                 if id is None:
@@ -268,5 +169,4 @@ class BNO08X():
                 if packet_report_id == id:
                     data = self.bno._readings[id]
                     return data
-            time.sleep(0.001)
            
