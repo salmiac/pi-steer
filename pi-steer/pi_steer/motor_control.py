@@ -1,5 +1,4 @@
 import time
-import threading
 import pi_steer.pwm_motor as pwm
 import pi_steer.debug as db
 import gpiozero

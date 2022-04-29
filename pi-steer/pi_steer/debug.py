@@ -2,7 +2,7 @@ import time
 
 def now():
     localtime = time.localtime()
-    return '{}:{}:{}'.format(localtime.tm_hour, localtime.tm_min, localtime.tm_sec)
+    return '{:02d}:{:02d}:{:02d}'.format(localtime.tm_hour, localtime.tm_min, localtime.tm_sec)
 
 print('Start debugger')
 

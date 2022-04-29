@@ -15,14 +15,18 @@ class IMU():
         address = 0
         self.device = None
         self.poll_delay = 1 # 0.01
+        self.bno085 = False
+        self.bno055 = False
 
-        address = pi_steer.bno08x.find_bno085()
-        if address:
-            self.device = pi_steer.bno08x.BNO08X(address, debug)
-        else:
+        self.device = pi_steer.bno08x.BNO08X(debug)
+        if self.device.read():
+            self.bno085 = True
+            self.device.reader_thread.start()
+        if not self.bno085:
             address = pi_steer.bno055.find_bno055()
             if address:
                 self.device = pi_steer.bno055.BNO055(address, debug)
+            self.bno055 = True
 
         if debug:
             db.write('Imu address and device {} {}'.format(address, self.device) )
@@ -47,7 +51,7 @@ class IMU():
                 break
 
     def read(self):
-        if self.device:
+        if self.bno055 and self.device:
             for retry in range(3):
                 qn = None
                 try:
@@ -73,4 +77,6 @@ class IMU():
                 if self.debug:
                     db.write('Heading {}, roll {}, pitch {}'.format(heading, roll, pitch) )
                 return (heading, roll, pitch)
+        elif self.bno085:
+            return self.device.get_orientation()
         return None
