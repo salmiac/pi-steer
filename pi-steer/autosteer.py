@@ -1,6 +1,5 @@
 import time
 import sys
-import threading
 import getopt
 import gpiozero
 import pi_steer.imu
@@ -32,7 +31,6 @@ def main(argv):
     motor_control = pi_steer.motor_control.MotorControl(settings, debug=False)
     agio = pi_steer.agio.AgIO(settings, motor_control, debug=False)
 
-    # threading.Thread(target=agio_reader, args=(agio, settings, motor_control,)).start()
     blinker = 0
     if debug:
         db.write('Start loop.')

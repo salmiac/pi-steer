@@ -18,13 +18,14 @@ sudo apt-get update
 sudo apt-get upgrade
 sudo apt-get install pip
 pip install smbus2
+pip install adafruit-circuitpython-bno08x
 ```
 
 Configure raspberry:
 ```
 sudo raspi-config
 ```
-From System Options set Wireless LAN, from Interface Options enable I2C, 
+From System Options set Wireless LAN, from Interface Options enable I2C, disable login console on serial port, enable serial port hardware.
 
 Edit `/boot/config.txt`
 ```
@@ -45,11 +46,11 @@ To start automatically at boot add followin line to `/etc/rc.0`
 ## Raspberry Pi pinout
 |Device|pin|Pi GPIO|Pi pin|Pi pin|Pi GPIO|pin|Device|
 |--|--|--|--|--|--|--|--|
-|BSS138, BNO085|LV, VIN|3v3 Power|1|2|5V Power|HV, VDD|BSS138, ADS1115|
-|BSS138, BNO085|A2, SDA|I2C SDA|3|4|5V Power|VCC, 1-A|RTY120LVNAA|
-|BSS138, BNO085|A1, SCL|I2C SCL|5|6|Ground|GND, 2-B|RTY120LVNAA|
-|Relay, up/down|up|GPIO 4|7|8|GPIO 14|TXD|reserver for GPS|
-|BNO085|GND|Ground|9|10|GPIO 15|RXD|reserver for GPS|
+|BSS138, BNO055, BNO085 VCC/PS0|LV, VIN|3v3 Power|1|2|5V Power|HV, VDD|BSS138, ADS1115|
+|BSS138 (ADS1115), BNO055|A2, SDA|I2C SDA|3|4|5V Power|VCC, 1-A|RTY120LVNAA|
+|BSS138 (ADS1115), BNO055|A1, SCL|I2C SCL|5|6|Ground|GND, 2-B|RTY120LVNAA|
+|Relay, up/down|up|GPIO 4|7|8|GPIO 14|TXD|BNO085 SCL/SCK/RX|
+|BNO055|GND|Ground|9|10|GPIO 15|RXD|BNO085 S/MISO/TX|
 |Relay, up/down|down|GPIO 17|11|12|GPIO 18|16|Relay|
 |Autosteer switch|A|GPIO 27|13|14|Ground|GND|Relay|
 |Relay|1|GPIO 22|15|16|GPIO 23|15|Relay|
