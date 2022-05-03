@@ -60,6 +60,7 @@ class BNO08X():
             if data is not None:
                 (heading, roll, pitch) = data
                 if heading is not None:
+                    roll = -roll
                     self.lock.acquire()
                     self.orientation = (heading, roll, pitch)
                     if self.debug:

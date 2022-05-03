@@ -2,7 +2,7 @@ import pi_steer.bno055
 import pi_steer.bno08x
 import pi_steer.quaternion
 import pi_steer.debug as db
-
+import time
 
 BNO055_ADDRESS0 = 0x28
 BNO055_ADDRESS1 = 0x29
@@ -32,10 +32,12 @@ class IMU():
             db.write('Imu address and device {} {}'.format(address, self.device) )
         self.base_roll = 0
         for n in range(20):
+            time.sleep(1)
             orientation = self.read()
             if orientation is None:
                 continue
             (heading, roll, pitch) = orientation
+            print("Base roll", roll)
             if roll is None:
                 continue
             if -45 < roll < 45:
@@ -78,5 +80,12 @@ class IMU():
                     db.write('Heading {}, roll {}, pitch {}'.format(heading, roll, pitch) )
                 return (heading, roll, pitch)
         elif self.bno085:
-            return self.device.get_orientation()
+            heading, roll, pitch = self.device.get_orientation()
+            roll -= self.base_roll
+            if roll < -180:
+                roll += 360
+            if roll > 180:
+                roll -= 360
+            return (heading, roll, pitch) 
+
         return None
