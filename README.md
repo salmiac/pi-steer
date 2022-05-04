@@ -18,7 +18,7 @@ sudo apt-get update
 sudo apt-get upgrade
 sudo apt-get install pip
 pip install smbus2
-pip install adafruit-circuitpython-bno08x
+pip install pyserial
 ```
 
 Configure raspberry:
@@ -41,6 +41,9 @@ Run program by:
 
 To start automatically at boot add followin line to `/etc/rc.0`
 `python pi-steer/autosteer.py &`
+
+sudo crontab -e
+@reboot /bin/sleep 5; /usr/bin/python /home/pi/pi-steer/autosteer.py &
 
 
 ## Raspberry Pi pinout
