@@ -39,8 +39,10 @@ Run program by:
 
 `python pi-steer/autosteer.py`
 
-To start automatically at boot add followin line to `/etc/rc.0`
-`python pi-steer/autosteer.py &`
+To start automatically at boot enter `crontab -e` and add following line.
+```
+@reboot python /home/pi/pi-steer/autosteer.py & > /dev/null 2>&1
+```
 
 
 ## Raspberry Pi pinout

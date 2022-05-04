@@ -26,7 +26,7 @@ class IMU():
             address = pi_steer.bno055.find_bno055()
             if address:
                 self.device = pi_steer.bno055.BNO055(address, debug)
-            self.bno055 = True
+                self.bno055 = True
 
         if debug:
             db.write('Imu address and device {} {}'.format(address, self.device) )
