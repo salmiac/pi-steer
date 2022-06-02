@@ -12,9 +12,10 @@
 - Motor wheel is a wire brush wheel, wires cut off, double sided mounting tape for a little cushion and hockey stick tape for a little grip. Self vulcanizing rubber tape has got a better grip, but it doesn't last very long.
 
 ## Control box
-![control box](photos/IMG_20210728_223627.jpg)
-![control box](photos/IMG_20210728_223914.jpg)
-![control box](photos/IMG_20210728_223926.jpg)  
+![control box](photos/IMG_20220409_104014.jpg)
+![control box](photos/IMG_20220409_135902.jpg)
+![control box](photos/IMG_20220409_140238.jpg)  
+![control box](photos/IMG_20220409_140310.jpg)  
 
 ## Wheel angle sensor installation
 ![WAS](photos/IMG_20210805_120238.jpg)
