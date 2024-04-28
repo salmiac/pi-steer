@@ -5,148 +5,214 @@ use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use crate::config::settings::Settings;
+use crate::debug;
 
-const DELAY: u64 = 5;
-const RELAY_PINS: [u8; 18] = [22, 10, 9, 11, 0, 5, 6, 21, 20, 1, 7, 8, 25, 24, 23, 18, 4, 17];
-const WATCHDOG_TIMOUT: u128 = 1000;
+// TODO asetuksiin nämä
+// const IMPULSE_PINS: [u8; 2] = [4, 17];
+// const RELAY_PINS: [u8; 14] = [4, 17, 22, 10, 9, 11, 0, 5, 6, 21, 20, 1, 7, 8];
+// const SWITCH_PINS: [u8; 5] = [26, 18, 23, 24, 25];
+const WATCHDOG_TIMOUT: u128 = 2000;
 
+enum RelayMode {
+    Off = 0,
+    Impulse = 1,
+    OnOff = 2,
+    Reverse = 3,
+}
 
 fn section_status(sc: u16, n: usize) -> bool {
     (1 << n) & sc != 0
 }
 
-struct RelayControl {
-    up_down_status: bool,
-    up_down_time: Instant,
-    relays: Vec<OutputPin>,
+fn get_input(inputs: &Vec<InputPin>) -> u16 {
+    let mut sc = 0x0000;
+    for (n, pin) in inputs.iter().enumerate() {
+        if pin.is_low() {
+            sc = (1 << n) | sc;
+        }
+    }
+    sc
+}
+pub struct RelayControl {
+    impulse_mode_status: Vec<bool>,
+    impulse_time: Vec<Instant>,
+    pub impulse_gpio: Vec<OutputPin>,
+    pub relay_gpio: Vec<OutputPin>,
+    pub input_gpio: Vec<InputPin>,
+    mode: RelayMode,
+    impulse_seconds: f32,
+    pub sections: u16,
+    pub work_switch: InputPin,
 }
 
 impl RelayControl {
-    pub fn new() -> RelayControl {
+    pub fn new(mode: u8, impulse_seconds: f32, _impulse_gpio: Vec<u8>, _relay_gpio: Vec<u8>, _input_gpio: Vec<u8>, work_switch: u8) -> RelayControl {
         let gpio = Gpio::new().expect("Failed to initialize GPIO");
 
+        let mut impulse_gpio: Vec<OutputPin> = Vec::<OutputPin>::new();
+        let mut relay_gpio: Vec<OutputPin> = Vec::<OutputPin>::new();
+
+        if mode == RelayMode::Impulse as u8 {
+            impulse_gpio = _impulse_gpio.iter()
+            .map(|&pin| gpio.get(pin).expect("Failed to access GPIO pin").into_output())
+            .collect();
+        }
+        else {
+            relay_gpio = _relay_gpio.iter()
+            .map(|&pin| gpio.get(pin).expect("Failed to access GPIO pin").into_output())
+            .collect();
+        }
+    
+        let impulse_mode_status: Vec<bool> = (0..impulse_gpio.len()/2).into_iter().map(|_| false ).collect();
+        let impulse_time: Vec<Instant> = (0..impulse_gpio.len()/2).into_iter().map(|_| Instant::now()-Duration::from_secs(10) ).collect();
+
         RelayControl {
-            up_down_status: false,
-            up_down_time: Instant::now()-Duration::from_secs(10),
-            relays: RELAY_PINS.iter()
-                .map(|&pin| gpio.get(pin).expect("Failed to access GPIO pin").into_output())
+            impulse_mode_status,
+            impulse_time,
+            impulse_gpio: impulse_gpio,
+            relay_gpio: relay_gpio,
+            mode: match mode {
+                x if x == RelayMode::Off as u8 => RelayMode::Off,
+                x if x == RelayMode::Impulse as u8 => RelayMode::Impulse,
+                x if x == RelayMode::OnOff as u8 => RelayMode::OnOff,
+                x if x == RelayMode::Reverse as u8 => RelayMode::Reverse,
+                _ => RelayMode::Off
+            },
+            impulse_seconds,
+            sections: 0x0000,
+            work_switch: gpio.get(work_switch).unwrap().into_input_pullup(),
+            input_gpio: _input_gpio.iter()
+                .map(|&pin| gpio.get(pin).expect("Failed to access GPIO pin").into_input_pullup())
                 .collect(),
         }
     }
 
-    pub fn up_down(&mut self, status: bool) {
-        // let up_down_status = UP_DOWN_STATUS.lock().unwrap();
-        // let up_down_time = UP_DOWN_TIME.lock().unwrap();
-        
-        if status != self.up_down_status {
-            self.up_down_status = status;
-            if status {
-                self.relays[16].set_high();
-                self.relays[17].set_low();
-            } else {
-                self.relays[17].set_high();
-                self.relays[16].set_low();
-            }
-            self.up_down_time = Instant::now();
-            return;
+    fn get_sections(&mut self, manual: bool) -> u16 {
+        let work_switch = self.work_switch.is_low();
+        let mut sc = self.sections;
+        if ! work_switch {
+            sc = 0;
         }
+        if manual {
+            sc = get_input(&self.input_gpio)
+        }
+        sc
+    }
 
-        if self.up_down_time.elapsed() > Duration::from_secs(DELAY) {
-            self.relays[16].set_low();
-            self.relays[17].set_low();
+    pub fn impulse(&mut self, manual: bool) {
+        let sc = self.get_sections(manual);
+        
+        for n in 0..self.impulse_gpio.len()/2 {
+            let status = section_status(sc, n);
+            if self.impulse_mode_status[n] != status {
+                if status {
+                    self.impulse_gpio[n*2].set_high();
+                    self.impulse_gpio[n*2+1].set_low();
+                } else {
+                    self.impulse_gpio[n*2].set_low();
+                    self.impulse_gpio[n*2+1].set_high();
+                }
+                self.impulse_time[n] = Instant::now();
+                continue;
+            }
+
+            if self.impulse_time[n].elapsed() > Duration::from_millis((self.impulse_seconds/1000.0) as u64) {
+                self.impulse_gpio[n*2].set_low();
+                self.impulse_gpio[n*2+1].set_low();
+            }
+    
         }
     }
 
-    pub fn relays_set(&mut self, sc: u16, work_switch: bool) {
+    pub fn relays_on_off(&mut self, manual: bool) {
+        let sc = self.get_sections(manual);
         for n in 0..16 {
-            if work_switch && section_status(sc, n) {
-                self.relays[n].set_high();
+            if section_status(sc, n) {
+                self.relay_gpio[n].set_high();
             } else {
-                self.relays[n].set_low();
+                self.relay_gpio[n].set_low();
+            }
+        }
+    }
+
+    pub fn relays_reverse(&mut self,  manual: bool) {
+        let sc = self.get_sections(manual);
+        for n in 0..self.relay_gpio.len()/2 {
+            if section_status(sc, n) {
+                self.relay_gpio[n*2].set_high();
+                self.relay_gpio[n*2+1].set_low();
+            } else {
+                self.relay_gpio[n*2].set_low();
+                self.relay_gpio[n*2+1].set_high();
             }
         }
     }
 
     pub fn all_off(&mut self) {
-        for relay in self.relays.iter_mut() {
+        for relay in self.relay_gpio.iter_mut() {
             relay.set_low();
         }
     }
 
 }
 pub struct SectionControl {
-    settings: Arc<Mutex<Settings>>,
     watchdog_timer: Arc<Mutex<Instant>>,
-    work_switch: InputPin,
-    rc: Arc<Mutex<RelayControl>>,
-
-    //     relays: Vec<OutputPin>,
-//     up_down_mode: InputPin,
-//     normal_mode: InputPin,
-//     up_down_status: bool,
-//     up_down_time: Option<Instant>,
+    pub rc: Arc<Mutex<RelayControl>>,
 }
 
-// static UP_DOWN_MODE: Lazy<InputPin> = Lazy::new(|| GPIO.get(26).expect("Failed to access GPIO pin").into_input_pullup());
-// static NORMAL_MODE: Lazy<InputPin> = Lazy::new(|| GPIO.get(19).expect("Failed to access GPIO pin").into_input_pullup());
-// static mut UP_DOWN_STATUS: Lazy<Mutex<bool>> = Lazy::new(|| Mutex::new(false));
-// static mut UP_DOWN_TIME: Lazy<Mutex<Option<Instant>>> = Lazy::new(|| Mutex::new(None));
-
 impl SectionControl {
-    pub fn new(settings: Arc<Mutex<Settings>>) -> rppal::gpio::Result<SectionControl> {
-    //     let gpio = Gpio::new()?;
-    //     let relays = RELAY_PINS.iter()
-    //         .map(|&pin| gpio.get(pin).unwrap().into_output())
-    //         .collect::<Vec<OutputPin>>();
-    //     let up_down_mode = gpio.get(26)?.into_input_pullup();
-    //     let normal_mode = gpio.get(19)?.into_input_pullup();
-
-        let gpio = Gpio::new().expect("Failed to initialize GPIO");
-        
+    pub fn new(relay_mode: u8, impulse_seconds: f32, impulse_gpio: Vec<u8>, relay_gpio: Vec<u8>, input_gpio: Vec<u8>, work_switch: u8) -> rppal::gpio::Result<SectionControl> {
         let watchdog_timer = Arc::new(Mutex::new(Instant::now()));
-        let rc = Arc::new(Mutex::new(RelayControl::new()));
+        println!("Relay mode {}", relay_mode);
+        let rc = Arc::new(Mutex::new(RelayControl::new(relay_mode, impulse_seconds, impulse_gpio, relay_gpio, input_gpio, work_switch)));
 
         let watchdog_clone = Arc::clone(&watchdog_timer);
         let rc_clone = Arc::clone(&rc);
         thread::spawn(move || Self::watchdog(watchdog_clone, rc_clone));
         Ok(SectionControl {
-    //         relays,
-    //         up_down_mode,
-    //         normal_mode,
-    //         up_down_status: false,
-    //         up_down_time: None,
-            settings: Arc::clone(&settings),
             watchdog_timer,
-            work_switch: gpio.get(13).unwrap().into_input_pullup(),
             rc,
         })
     }
 
     fn watchdog(timer: Arc<Mutex<Instant>>, relays_arc: Arc<Mutex<RelayControl>>) {
+        let gpio = Gpio::new().expect("Failed to initialize GPIO");
+        let manual = gpio.get(19).expect("Failed to access GPIO pin").into_input_pullup();
         loop {
             let watchdog_timer = timer.lock().unwrap();
             let timeout = watchdog_timer.elapsed().as_millis() > WATCHDOG_TIMOUT;
             drop(watchdog_timer);
-            if timeout {
-                let mut relays = relays_arc.lock().unwrap();
+            let is_manual = manual.is_low();
+            if timeout && ! is_manual {
+                let mut rc = relays_arc.lock().unwrap();
                 // Shutdown all relays
-                relays.all_off();
+                rc.all_off();
+                debug::write("Timeout shutdown all relays.");
+                let mut watchdog_timer = timer.lock().unwrap();
+                *watchdog_timer = Instant::now();
+                drop(watchdog_timer);
+                }
+            else {
+                let mut rc = relays_arc.lock().unwrap();
+                match rc.mode {
+                    RelayMode::OnOff => {
+                        rc.relays_on_off(is_manual)
+                    },
+                    RelayMode::Impulse => rc.impulse(is_manual),
+                    RelayMode::Reverse => {
+                        rc.relays_reverse(is_manual)
+                    },
+                    RelayMode::Off => {
+                    },
+                };
             }
-            thread::sleep(Duration::from_millis(100));
+            thread::sleep(Duration::from_millis(5));
         }        
     }
 
     pub fn update(&mut self, sc: u16) {
-        let work_switch = self.work_switch.is_low();
-        let settings = self.settings.lock().unwrap();
         let mut rc = self.rc.lock().unwrap();
-        if settings.up_down {
-            rc.up_down(work_switch && section_status(sc, 0));
-        }
-        if settings.relays {
-            rc.relays_set(sc, work_switch);
-        }
+        rc.sections = sc;
         drop(rc);
         let mut watchdog_timer = self.watchdog_timer.lock().unwrap();
         *watchdog_timer = Instant::now();
@@ -154,14 +220,17 @@ impl SectionControl {
 }
 
 #[cfg(test)]
-mod tests {
-    // use super::*;
+mod section_control {
+    use super::*;
 
-    // #[test]
-    // fn section() {
-    //     let mut section_control = SectionControl::new();
-    //     // Simulate an update call with some status code `sc`
-    //     section_control.update(0b1010101010101010); // Example SC value
-
-    // }
+    #[test]
+    fn section() {
+        let impulse_gpio: Vec<u8> = [4, 17].to_vec();
+        let relay_gpio: Vec<u8> = [4, 17, 22, 10, 9, 11, 0, 5, 6, 21].to_vec();
+        let input_gpio: Vec<u8> = [26, 18, 23, 24, 25].to_vec();
+        let mut section_control = SectionControl::new(3, 2.0, impulse_gpio, relay_gpio, input_gpio, 13).unwrap();
+        // Simulate an update call with some status code `sc`
+        section_control.update(0b1010101010101010); // Example SC value
+        thread::sleep(Duration::from_millis(500));
+    }
 }

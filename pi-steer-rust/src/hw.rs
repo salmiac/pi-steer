@@ -1,4 +1,5 @@
 pub mod bno08x;
+pub mod gps;
 pub mod motor;
 pub mod ads1115;
 pub mod was;

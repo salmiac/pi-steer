@@ -54,23 +54,23 @@ sudo crontab -e
 |BSS138, BNO055, BNO085 VCC/PS0|LV, VIN|3v3 Power|1|2|5V Power|HV, VDD|BSS138, ADS1115|
 |BSS138 (ADS1115), BNO055|A2, SDA|I2C SDA|3|4|5V Power|VCC, 1-A|RTY120LVNAA|
 |BSS138 (ADS1115), BNO055|A1, SCL|I2C SCL|5|6|Ground|GND, 2-B|RTY120LVNAA|
-|Relay, up/down|up|GPIO 4|7|8|GPIO 14|TXD|BNO085 SCL/SCK/RX|
+|Relay|1|GPIO 4|7|8|GPIO 14|TXD|BNO085 SCL/SCK/RX|
 |BNO055|GND|Ground|9|10|GPIO 15|RXD|BNO085 S/MISO/TX|
-|Relay, up/down|down|GPIO 17|11|12|GPIO 18|16|Relay|
+|Relay|2|GPIO 17|11|12|GPIO 18|2|Manual (in)|
 |Autosteer switch|A|GPIO 27|13|14|Ground|GND|Relay|
-|Relay|1|GPIO 22|15|16|GPIO 23|15|Relay|
-|LED:s|+|3v3 Power|17|18|GPIO 24|14|Relay|
-|Relay|2|GPIO 10|19|20|Ground|-|Power LED|
-|Relay|3|GPIO 9|21|22|GPIO 25|13|Relay|
-|Relay|4|GPIO 11|23|24|GPIO 8|12|Relay|
-|Autosteer switch|B|Ground|25|26|GPIO 7|11|Relay|
-|Relay|5|GPIO 0|27|28|GPIO 1|10|Relay|
-|Relay|6|GPIO 5|29|30|Ground|GND|BSS138|
-|Relay|7|GPIO 6|31|32|GPIO 12, PWM 0|PWM|Cytron|
+|Relay|3|GPIO 22|15|16|GPIO 23|3|Manual (in)|
+|LED:s|+|3v3 Power|17|18|GPIO 24|4|Manual (in)|
+|Relay|4|GPIO 10|19|20|Ground|-|Power LED|
+|Relay|5|GPIO 9|21|22|GPIO 25|5|Manual (in)|
+|Relay|6|GPIO 11|23|24|GPIO 8|14|Relay|
+|Autosteer switch|B|Ground|25|26|GPIO 7|13|Relay|
+|Relay|7|GPIO 0|27|28|GPIO 1|12|Relay|
+|Relay|8|GPIO 5|29|30|Ground|GND|BSS138|
+|Relay|9|GPIO 6|31|32|GPIO 12, PWM 0|PWM|Cytron|
 |Work switch||GPIO 13|33|34|Ground|GND|Cytron|
-|Relay normal mode, switch|2|GPIO 19|35|36|GPIO 16|DIR|Cytron|
-|Relay up/down mode, switch|1|GPIO 26|37|38|GPIO 20|9|Relay|
-|Relay mode switch|GND|Ground|39|40|GPIO 21|8|Relay|
+|Relay, manual mode|2|GPIO 19|35|36|GPIO 16|DIR|Cytron|
+|Manual (in)|1|GPIO 26|37|38|GPIO 20|11|Relay|
+|Relay mode switch|GND|Ground|39|40|GPIO 21|10|Relay|
 
 ## Wheel angle sensor **RTY120LVNAA**
 |Function|pin|

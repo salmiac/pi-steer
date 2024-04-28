@@ -1,4 +1,4 @@
-use std::net::{UdpSocket, SocketAddrV4, Ipv4Addr};
+use std::net::{UdpSocket};
 use std::thread;
 use std::time::Duration;
 use byteorder::{ByteOrder, LittleEndian};
@@ -35,6 +35,7 @@ impl Writer {
     pub fn new(is_imu: bool, debug: bool) -> Writer {
         let client = UdpSocket::bind("0.0.0.0:0").unwrap();
         client.set_broadcast(true).unwrap();
+        println!("Start Writer, IMU {}", is_imu);
         Writer{
             client,
             is_imu,
@@ -46,13 +47,16 @@ impl Writer {
         let mut data = vec![0x80, 0x81, 0x7e, 0xfd, 0x08];
         
         let pwm_display = (pwm_value * 2.55) as u8;
-        let wheel_angle_int = (wheel_angle * 100.0) as i16;
+        // let wheel_angle_int = (wheel_angle * 100.0) as i16;
+        let wheel_angle_int = 13 as i16;
         let mut heading_int = ((heading * 10.0) as i16) as u16;
         let mut roll_int = ((roll * 10.0) as i16) as u16;
-        if ! self.is_imu {
-            heading_int = 0xffff;
-            roll_int = 0xffff;
-        }
+        // if ! self.is_imu {
+            //     heading_int = 9999;
+            // roll_int = 8888;
+        // }
+        heading_int = 34;
+        roll_int = 25;
 
         let mut buf = [0; 2];
         LittleEndian::write_i16(&mut buf, wheel_angle_int);
@@ -76,13 +80,29 @@ impl Writer {
         }
     }
 
-    fn send_heartbeat(client: &UdpSocket) -> std::io::Result<()> {
-        let heartbeat_message = [0x80, 0x81, 0x7f, HELLO as u8, 1, 0, 0x47];
-        let broadcast_addr = SocketAddrV4::new(Ipv4Addr::BROADCAST, 9999);
-        client.send_to(&heartbeat_message, broadcast_addr)?;
-        println!("Heartbeat message sent.");
-        Ok(())
+    pub fn gps(&self, line: &str) {
+        let mut data: Vec<u8> = vec![0x80, 0x81, 0x7c, 0xd6];
+        let mut line_data = line.to_string().into_bytes();
+        data.push(line_data.len() as u8);
+        data.extend_from_slice(&mut line_data);
+        let crc: u8 = data.iter().skip(2).fold(0, |acc, &x| acc.wrapping_add(x));
+        data.push(crc);
+
+        match self.client.send_to(&data, "255.255.255.255:9999") {
+            Ok(_) => (),
+            Err(e) => if self.debug {
+                println!("Send error: {:?}", e);
+            },
+        }
     }
+
+    // fn send_heartbeat(client: &UdpSocket) -> std::io::Result<()> {
+    //     let heartbeat_message = [0x80, 0x81, 0x7f, HELLO as u8, 1, 0, 0x47];
+    //     let broadcast_addr = SocketAddrV4::new(Ipv4Addr::BROADCAST, 9999);
+    //     client.send_to(&heartbeat_message, broadcast_addr)?;
+    //     println!("Heartbeat message sent.");
+    //     Ok(())
+    // }
     
 }
 
@@ -107,10 +127,14 @@ pub struct Reader {
 
 impl Reader {
     pub fn new(settings: Arc<Mutex<Settings>>, motor: Arc<Mutex<MotorControl>>, debug: bool) -> Reader {
+        let set_lock = settings.lock().unwrap();
+        println!("Relay mode reader {}", set_lock.relay_mode);
+        let sc = SectionControl::new(set_lock.relay_mode, set_lock.impulse_seconds, set_lock.impulse_gpio.clone(), set_lock.relay_gpio.clone(), set_lock.input_gpio.clone(), set_lock.work_switch ).unwrap();
+        drop(set_lock);
         Reader { 
             motor, 
             settings: Arc::clone(&settings), 
-            sc: SectionControl::new(Arc::clone(&settings)).unwrap(),
+            sc,
             debug 
         }
     }
@@ -120,10 +144,8 @@ impl Reader {
         server.set_broadcast(true).unwrap();
         server.set_nonblocking(true).unwrap();
 
-        // let agio_arc = Arc::new(Mutex::new(&agio));
         let agio_arc = Arc::new(Mutex::new(self));
         let agio_clone = Arc::clone(&agio_arc);
-        // let server_clone = server.try_clone()?; // Correctly clone the `UdpSocket`
     
         // Reader thread to listen for incoming messages
         let _reader_thread = thread::spawn(move || loop {
@@ -248,7 +270,7 @@ impl Reader {
 
                 if self.debug {
                     println!("autosteer data");
-                    println!("SC: {}", sc);
+                    println!("SC: {:#018b}", sc);
                 }
                 motor.set_control(steer_angle, status != 0);
                 self.sc.update(sc);
@@ -257,38 +279,9 @@ impl Reader {
         }
     }
 
-    // Function to handle different types of messages based on PGN
-    // fn handle_message((pgn, payload): (u8, Vec<u8>)) {
-    //     match pgn {
-    //         HELLO => println!("Received Hello message."),
-    //         LATLON => if payload.len() >= 8 {
-    //             let lat = BigEndian::read_i32(&payload[0..4]);
-    //             let lon = BigEndian::read_i32(&payload[4..8]);
-    //             println!("Received LatLon: lat {}, lon {}", lat, lon);
-    //         },
-    //         IMU => if payload.len() >= 4 {
-    //             let heading = LittleEndian::read_i16(&payload[0..2]) as f32 / 10.0;
-    //             let roll = LittleEndian::read_i16(&payload[2..4]) as f32 / 10.0;
-    //             println!("Received IMU: heading {}, roll {}", heading, roll);
-    //         },
-    //         _ => println!("Received unknown message type: {}", pgn),
-    //     }
-    // }
-
 }
 
 #[test]
 fn settest() {
-    // let server = UdpSocket::bind("0.0.0.0:8888")?;
-    // server.set_broadcast(true)?;
-    // server.set_nonblocking(true)?;
 
-    // let client = UdpSocket::bind("0.0.0.0:0")?;
-    // client.set_broadcast(true)?;
-
-    // Sending a "heartbeat" message to demonstrate UDP sending
-    // send_heartbeat(&client)?;
-
-    // let agi = AgIO::new
-    // reader_thread.join().unwrap();
 }

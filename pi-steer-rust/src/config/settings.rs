@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
-use serde_json::{Result as JsonResult, Value};
+use serde_json::{Result as JsonResult};
 use std::{fs::File, io::Read, io::Write};
-use log::{info};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Settings {
     pub gain_p: u8,
     pub high_pwm: u8,
@@ -23,15 +22,24 @@ pub struct Settings {
     pub pressure_sensor: bool,
     pub current_sensor: bool,
     pub bno085: bool,
-    pub relays: bool,
-    pub up_down: bool,
+    pub relay_mode: u8,
+    pub impulse_seconds: f32,
+    pub impulse_gpio: Vec<u8>,
+    pub relay_gpio: Vec<u8>,
+    pub input_gpio: Vec<u8>,
+    pub work_switch: u8,
+    pub autosteer_switch: u8,
+    pub pwm_direction: u8,
+    pub was: bool,
+    pub gps: String,
+    // TODO pin settings
     #[serde(skip)]
     debug: bool,
 }
 
 impl Settings {
     pub fn new(debug: bool) -> Self {
-        let mut settings = Settings {
+        let settings = Settings {
             gain_p: 50,
             high_pwm: 120,
             low_pwm: 30,
@@ -50,25 +58,33 @@ impl Settings {
             pressure_sensor: false,
             current_sensor: false,
             bno085: false,
-            relays: false,
-            up_down: false,
+            relay_mode: 0,
+            impulse_seconds: 4.0,
+            impulse_gpio: [4, 17].to_vec(),
+            relay_gpio: [4, 17, 22, 10, 9, 11, 0, 5, 6, 21].to_vec(),
+            input_gpio: [26, 18, 23, 24, 25].to_vec(),
+            work_switch: 13,
+            autosteer_switch: 27,
+            pwm_direction: 16,
+            was: true,
+            gps: "ttyS0".to_string(),
             debug,
         };
-        settings.load_settings();
-        settings
+        settings.load_settings()
     }
 
-    fn load_settings(&mut self) {
+    fn load_settings(mut self) -> Self {
         match File::open("settings.json") {
             Ok(mut file) => {
                 let mut contents = String::new();
                 if let Err(err) = file.read_to_string(&mut contents) {
                     self.log(&format!("Read file error: {}", err));
-                    return;
+                    return self;
                 }
-                let updated_settings: JsonResult<Value> = serde_json::from_str(&contents);
+                let updated_settings: JsonResult<Settings> = serde_json::from_str::<Settings>(&contents);
                 match updated_settings {
                     Ok(_json) => {
+                        return _json;
                         // Assuming manual merging of settings is required. Implement as needed.
                     },
                     Err(err) => self.log(&format!("JSON parse error: {}", err)),
@@ -79,6 +95,7 @@ impl Settings {
                 self.save_settings();
             },
         }
+        return self;
     }
 
     pub fn save_settings(&mut self) {
@@ -96,7 +113,7 @@ impl Settings {
 
     fn log(&self, message: &str) {
         if self.debug {
-            info!("{}", message); // Using the `log` crate's `info!` macro for logging
+            println!("{}", message); // Using the `log` crate's `info!` macro for logging
         }
     }
 }

@@ -12,3 +12,11 @@ cargo build
 cargo test
 
 cargo test -- --nocapture
+
+# Test single unit test
+cargo test gps -- --nocapture
+
+# Build release version
+cargo build --release
+
+Executable is target/release/pi-steer-rust

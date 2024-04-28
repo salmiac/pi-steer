@@ -1,60 +1,73 @@
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use std::thread;
 use std::time::Duration;
 use std::sync::{Arc, Mutex};
-use rppal::gpio::{Gpio};
 
 pub mod debug;
 pub mod hw;
 pub mod config;
 pub mod communication;
 
-use crate::hw::{motor::MotorControl, imu::IMU, was::WAS};
+use crate::hw::{motor::MotorControl, imu::IMU, was::WAS, gps::GPS};
 use crate::config::settings::Settings;
 use crate::communication::agio::{Reader, Writer};
 
 fn main() {
-    debug::write("Moe");
-
-    let matches = App::new("Pi Steer")
+    let matches = Command::new("Pi-steer")
         .version("1.0")
-        .arg(Arg::with_name("debug")
-             .short("d")
-             .long("debug")
-             .help("Activates debug mode"))
+        .author("Jaakko Yli-Luukko")
+        .about("AgOpenGPS controller for Raspberry Pi")
+        .arg(Arg::new("config")
+                .short('c')
+                .long("config")
+                .value_name("FILE")
+                .help("Sets a custom config file")
+        )
+        .arg(
+            Arg::new("debug")
+                .short('d')
+                .long("debug")
+                .help("Activate debug mode")
+                
+        )
         .get_matches();
 
-    let debug = matches.is_present("debug");
+    debug::write("Moe");
+
+    let debug = matches.contains_id("debug");
 
     if debug {
         println!("Debug on");
     }
 
-    // Setup GPIO pin for work switch
-    let gpio = Gpio::new().expect("Failed to access GPIO");
-    let work_switch = gpio.get(13).expect("Failed to access GPIO pin").into_input_pullup();
-
-    // Initialize your components here (imu, settings, was, motor_control, agio)
-    // Placeholder: actual initialization depends on your implementation
-    
     debug::write("Start Settings");
     let settings_arc = Arc::new(Mutex::new(Settings::new(debug)));
     let mut imu: Option<IMU> = None;
     let settings = settings_arc.lock().unwrap();
     let is_imu = settings.bno085;
+    let is_was = settings.was;
+    let gps_port = settings.gps.clone();
+    drop(settings);
+    let _gps: GPS;
     if is_imu {
         debug::write("Start IMU");
         imu = Some(IMU::new(debug).unwrap());
     }
-    drop(settings);
-    debug::write("Start WAS");
-    let mut was = WAS::new(Arc::clone(&settings_arc)).unwrap();
+    if ! gps_port.is_empty() {
+        _gps = GPS::new(debug, gps_port);
+    }
+    let mut was: Option<WAS> = None;
+    if is_was {
+        debug::write("Start WAS");
+        was = Some(WAS::new(Arc::clone(&settings_arc)).unwrap());
+    }
     debug::write("Start Motor control");
     let motor_control = Arc::new(Mutex::new(MotorControl::new(Arc::clone(&settings_arc))));
     debug::write("Start AgIO");
     let reader = Reader::new(Arc::clone(&settings_arc), Arc::clone(&motor_control), debug);
+    let rc = Arc::clone(&reader.sc.rc);
     reader.start();
-
+    
     let mut heading: f32 = 0.0;
     let mut roll: f32 = 0.0;
     
@@ -68,13 +81,20 @@ fn main() {
             (heading, roll, _) = imu.read();
         }
 
-        let wheel_angle = was.read();
+        let mut wheel_angle: f64 = 0.0;
+        match was {
+            Some(ref mut w) => wheel_angle = w.read(),
+            None => (),
+        }
         let mut motor = motor_control.lock().unwrap();
         motor.update_motor(wheel_angle);
-        let mut switch_state: u8 = if motor.switch.is_high() { 0b1111_1101 } else { 0b1111_1111 };
+        let mut switch_state: u8 = if motor.switch.is_low() { 0b1111_1101 } else { 0b1111_1111 };
         // Work switch
 
-        if work_switch.is_low() {
+        let rc_lock = rc.lock().unwrap();
+        let work_switch = rc_lock.work_switch.is_low();
+        drop(rc_lock);
+        if work_switch {
             switch_state &= 0b1111_1110;
         }
         writer.from_autosteer(wheel_angle, heading, roll, switch_state, motor.pwm_value);
