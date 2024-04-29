@@ -47,16 +47,13 @@ impl Writer {
         let mut data = vec![0x80, 0x81, 0x7e, 0xfd, 0x08];
         
         let pwm_display = (pwm_value * 2.55) as u8;
-        // let wheel_angle_int = (wheel_angle * 100.0) as i16;
-        let wheel_angle_int = 13 as i16;
+        let wheel_angle_int = (wheel_angle * 100.0) as i16;
         let mut heading_int = ((heading * 10.0) as i16) as u16;
         let mut roll_int = ((roll * 10.0) as i16) as u16;
-        // if ! self.is_imu {
-            //     heading_int = 9999;
-            // roll_int = 8888;
-        // }
-        heading_int = 34;
-        roll_int = 25;
+        if ! self.is_imu {
+            heading_int = 9999;
+            roll_int = 8888;
+        }
 
         let mut buf = [0; 2];
         LittleEndian::write_i16(&mut buf, wheel_angle_int);
@@ -80,11 +77,44 @@ impl Writer {
         }
     }
 
-    pub fn gps(&self, line: &str) {
-        let mut data: Vec<u8> = vec![0x80, 0x81, 0x7c, 0xd6];
-        let mut line_data = line.to_string().into_bytes();
-        data.push(line_data.len() as u8);
-        data.extend_from_slice(&mut line_data);
+    pub fn gps(&self, _time: &str, lat: f64, ns: &str, lon: f64, ew: &str, fix: u8, sat: u16, hdop: f32, alt: f32, _geoid: &str, age: f32, heading: f32, speed: f32) {
+        let mut data: Vec<u8> = vec![0x80, 0x81, 0x7c, 0xd6, 51 as u8];
+        let mut buf8 = [0; 8];
+        let mut buf4 = [0; 4];
+        let mut buf2 = [0; 2];
+        let mut longitude = lon;
+        if ew == "W" { longitude = -longitude; }
+        let mut latitude = lat;
+        if ns == "S" { latitude = -latitude; }
+        LittleEndian::write_f64(&mut buf8, longitude);
+        data.extend_from_slice(&mut buf8);
+        LittleEndian::write_f64(&mut buf8, latitude);
+        data.extend_from_slice(&mut buf8);
+        LittleEndian::write_f32(&mut buf4, f32::MAX); // dual antenna heading
+        data.extend_from_slice(&mut buf4);
+        LittleEndian::write_f32(&mut buf4, heading); // single antenna heading
+        data.extend_from_slice(&mut buf4);
+        LittleEndian::write_f32(&mut buf4, speed); // Speed
+        data.extend_from_slice(&mut buf4);
+        LittleEndian::write_f32(&mut buf4, f32::MAX); // Roll
+        data.extend_from_slice(&mut buf4);
+        LittleEndian::write_f32(&mut buf4, alt); // Altitude
+        data.extend_from_slice(&mut buf4);
+        LittleEndian::write_u16(&mut buf2, sat); // Satellites
+        data.extend_from_slice(&mut buf2);
+        data.push(fix); //Fix
+        LittleEndian::write_u16(&mut buf2, (hdop * 100.0) as u16); // HDOP
+        data.extend_from_slice(&mut buf2);
+        LittleEndian::write_u16(&mut buf2, (age * 100.0) as u16); // Age
+        data.extend_from_slice(&mut buf2);
+        LittleEndian::write_u16(&mut buf2, u16::MAX); // IMU heading
+        data.extend_from_slice(&mut buf2);
+        LittleEndian::write_i16(&mut buf2, i16::MAX); // IMU roll
+        data.extend_from_slice(&mut buf2);
+        LittleEndian::write_i16(&mut buf2, i16::MAX); // IMU pitch
+        data.extend_from_slice(&mut buf2);
+        LittleEndian::write_i16(&mut buf2, i16::MAX); // IMU yaw
+        data.extend_from_slice(&mut buf2);
         let crc: u8 = data.iter().skip(2).fold(0, |acc, &x| acc.wrapping_add(x));
         data.push(crc);
 

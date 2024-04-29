@@ -10,11 +10,11 @@ pub struct GPS {
     // orientation: Arc<Mutex<(f32, f32, f32, bool)>>,
 }
 
-fn build_gga(time: &str, lat: &str, ns: &str, lon: &str, ew: &str, fix: &str, sats: &str, hdop: &str, alt: &str, geoid: &str, age: &str) -> String {
-    let data = format!("GPGGA,{},{},{},{},{},{},{},{},{},M,{},M,{},0000", time, lat, ns, lon, ew, fix, sats, hdop, alt, geoid, alt);
-    let crc: u8 = data.as_bytes().iter().skip(2).fold(0, |acc, &x| acc.wrapping_add(x));
-    format!("${}*{:X}", data, crc)
-}
+// fn build_gga(time: &str, lat: &str, ns: &str, lon: &str, ew: &str, fix: &str, sats: &str, hdop: &str, alt: &str, geoid: &str, age: &str) -> String {
+//     let data = format!("GPGGA,{},{},{},{},{},{},{},{},{},M,{},M,{},0000", time, lat, ns, lon, ew, fix, sats, hdop, alt, geoid, alt);
+//     let crc: u8 = data.as_bytes().iter().skip(2).fold(0, |acc, &x| acc.wrapping_add(x));
+//     format!("${}*{:X}", data, crc)
+// }
 
 impl GPS {
     pub fn new(debug: bool, port: String) -> Self {
@@ -39,6 +39,8 @@ impl GPS {
         let mut reader = BufReader::new(port);
 
         let mut line = String::new();
+        let mut speed: f32 = f32::MAX;
+        let mut heading: f32 = 0.0;
         loop {
             match reader.read_line(&mut line) {
                 Ok(_) => {
@@ -48,20 +50,40 @@ impl GPS {
                     }
 
                     let part: Vec<&str> = trimmed.split(",").collect();
-                    if part[0] == "$GNGGA" {
-                        let time = part[1];
-                        let lat = part[2];
-                        let ns = part[3];
-                        let lon = part [4];
-                        let ew = part[5];
-                        let fix = part[6];
-                        let sats = part[7];
-                        let hdop = part[8];
-                        let alt = part[9];
-                        let geoid = part[11];
-                        let age = part[13];
+                    if part[0] == "$GNVTG" {
+                        let course = part[1];
+                        let kph = part[7];
+                        if course != "" {
+                            heading = course.parse::<f32>().unwrap();
+                        }
+                        else {
+                            heading = 0.0;
+                        }
+                        if kph != "" {
+                            speed = kph.parse::<f32>().unwrap();
+                        }
+                        else {
+                            speed = f32::MAX;
+                        }
                     }
-                    writer.gps(trimmed);
+                    else if part[0] == "$GNGGA" {
+                        if part[6] != "0" && part[6] != "" {
+                            let time = part[1];
+                            let mut lat = part[2][0..2].parse::<f64>().unwrap() + part[2][2..].parse::<f64>().unwrap() / 60.0;
+                            let ns = part[3];
+                            if ns == "S" { lat = -lat; }
+                            let mut lon = part[4][0..3].parse::<f64>().unwrap() + part[4][3..].parse::<f64>().unwrap() / 60.0;
+                            let ew = part[5];
+                            if ew == "W" { lon = -lon; }
+                            let fix = part[6].parse::<u8>().unwrap();
+                            let sat = part[7].parse::<u16>().unwrap();
+                            let hdop = part[8].parse::<f32>().unwrap();
+                            let alt = part[9].parse::<f32>().unwrap();
+                            let geoid = part[11];
+                            let age = part[13].parse::<f32>().unwrap();
+                            writer.gps(time, lat, ns, lon, ew, fix, sat, hdop, alt, geoid, age, heading, speed);
+                        }
+                    }
                 },
                 Err(e) => {
                     if debug {
