@@ -67,7 +67,7 @@ impl Settings {
             autosteer_switch: 27,
             pwm_direction: 16,
             was: true,
-            gps: "ttyS0".to_string(),
+            gps: "serial0".to_string(),
             debug,
         };
         settings.load_settings()

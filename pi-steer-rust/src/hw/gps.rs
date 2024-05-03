@@ -54,33 +54,33 @@ impl GPS {
                         let course = part[1];
                         let kph = part[7];
                         if course != "" {
-                            heading = course.parse::<f32>().unwrap();
+                            heading = course.parse::<f32>().unwrap_or(0.0);
                         }
                         else {
                             heading = 0.0;
                         }
                         if kph != "" {
-                            speed = kph.parse::<f32>().unwrap();
+                            speed = kph.parse::<f32>().unwrap_or(0.0);
                         }
                         else {
                             speed = f32::MAX;
                         }
                     }
                     else if part[0] == "$GNGGA" {
-                        if part[6] != "0" && part[6] != "" {
+                        if part[6] != "0" && part[6] != "" && part[1] != "" && part[2] != "" && part[4] != "" {
                             let time = part[1];
-                            let mut lat = part[2][0..2].parse::<f64>().unwrap() + part[2][2..].parse::<f64>().unwrap() / 60.0;
+                            let mut lat = part[2][0..2].parse::<f64>().unwrap_or(0.0) + part[2][2..].parse::<f64>().unwrap_or(0.0) / 60.0;
                             let ns = part[3];
                             if ns == "S" { lat = -lat; }
-                            let mut lon = part[4][0..3].parse::<f64>().unwrap() + part[4][3..].parse::<f64>().unwrap() / 60.0;
+                            let mut lon = part[4][0..3].parse::<f64>().unwrap_or(0.0) + part[4][3..].parse::<f64>().unwrap_or(0.0) / 60.0;
                             let ew = part[5];
                             if ew == "W" { lon = -lon; }
-                            let fix = part[6].parse::<u8>().unwrap();
-                            let sat = part[7].parse::<u16>().unwrap();
-                            let hdop = part[8].parse::<f32>().unwrap();
-                            let alt = part[9].parse::<f32>().unwrap();
+                            let fix = part[6].parse::<u8>().unwrap_or(0);
+                            let sat = part[7].parse::<u16>().unwrap_or(0);
+                            let hdop = part[8].parse::<f32>().unwrap_or(0.0);
+                            let alt = part[9].parse::<f32>().unwrap_or(0.0);
                             let geoid = part[11];
-                            let age = part[13].parse::<f32>().unwrap();
+                            let age = part[13].parse::<f32>().unwrap_or(99.9); // Panic
                             writer.gps(time, lat, ns, lon, ew, fix, sat, hdop, alt, geoid, age, heading, speed);
                         }
                     }
@@ -105,7 +105,9 @@ mod gps {
 
     #[test]
     fn gps() {
-        let _gps = GPS::new(true, "ttyS0".to_string());
+        let _gps = GPS::new(true, "serial0".to_string());
+        thread::sleep(Duration::from_millis(5000));
+        let _gps2 = GPS::new(true, "serial1".to_string());
         thread::sleep(Duration::from_millis(5000));
     }
 }

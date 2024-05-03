@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use crate::debug;
+// use crate::debug;
 
 // TODO asetuksiin nämä
 // const IMPULSE_PINS: [u8; 2] = [4, 17];
@@ -90,11 +90,15 @@ impl RelayControl {
     fn get_sections(&mut self, manual: bool) -> u16 {
         let work_switch = self.work_switch.is_low();
         let mut sc = self.sections;
+        let manual_sc = get_input(&self.input_gpio);
         if ! work_switch {
             sc = 0;
         }
+        else {
+            sc = sc & manual_sc;
+        }
         if manual {
-            sc = get_input(&self.input_gpio)
+            sc = manual_sc;
         }
         sc
     }
@@ -106,19 +110,19 @@ impl RelayControl {
             let status = section_status(sc, n);
             if self.impulse_mode_status[n] != status {
                 if status {
-                    self.impulse_gpio[n*2].set_high();
-                    self.impulse_gpio[n*2+1].set_low();
-                } else {
                     self.impulse_gpio[n*2].set_low();
                     self.impulse_gpio[n*2+1].set_high();
+                } else {
+                    self.impulse_gpio[n*2].set_high();
+                    self.impulse_gpio[n*2+1].set_low();
                 }
                 self.impulse_time[n] = Instant::now();
                 continue;
             }
 
             if self.impulse_time[n].elapsed() > Duration::from_millis((self.impulse_seconds/1000.0) as u64) {
-                self.impulse_gpio[n*2].set_low();
-                self.impulse_gpio[n*2+1].set_low();
+                self.impulse_gpio[n*2].set_high();
+                self.impulse_gpio[n*2+1].set_high();
             }
     
         }
@@ -128,9 +132,9 @@ impl RelayControl {
         let sc = self.get_sections(manual);
         for n in 0..16 {
             if section_status(sc, n) {
-                self.relay_gpio[n].set_high();
-            } else {
                 self.relay_gpio[n].set_low();
+            } else {
+                self.relay_gpio[n].set_high();
             }
         }
     }
@@ -139,18 +143,18 @@ impl RelayControl {
         let sc = self.get_sections(manual);
         for n in 0..self.relay_gpio.len()/2 {
             if section_status(sc, n) {
-                self.relay_gpio[n*2].set_high();
-                self.relay_gpio[n*2+1].set_low();
-            } else {
                 self.relay_gpio[n*2].set_low();
                 self.relay_gpio[n*2+1].set_high();
+            } else {
+                self.relay_gpio[n*2].set_high();
+                self.relay_gpio[n*2+1].set_low();
             }
         }
     }
 
     pub fn all_off(&mut self) {
         for relay in self.relay_gpio.iter_mut() {
-            relay.set_low();
+            relay.set_high();
         }
     }
 
@@ -187,10 +191,10 @@ impl SectionControl {
                 let mut rc = relays_arc.lock().unwrap();
                 // Shutdown all relays
                 rc.all_off();
-                debug::write("Timeout shutdown all relays.");
-                let mut watchdog_timer = timer.lock().unwrap();
-                *watchdog_timer = Instant::now();
-                drop(watchdog_timer);
+                // debug::write("Timeout shutdown all relays.");
+                // let mut watchdog_timer = timer.lock().unwrap();
+                // *watchdog_timer = Instant::now();
+                // drop(watchdog_timer);
                 }
             else {
                 let mut rc = relays_arc.lock().unwrap();

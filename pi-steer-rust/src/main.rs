@@ -51,10 +51,10 @@ fn main() {
     let _gps: GPS;
     if is_imu {
         debug::write("Start IMU");
-        imu = Some(IMU::new(debug).unwrap());
+        imu = Some(IMU::new(false).unwrap());
     }
     if ! gps_port.is_empty() {
-        _gps = GPS::new(debug, gps_port);
+        _gps = GPS::new(false, gps_port);
     }
     let mut was: Option<WAS> = None;
     if is_was {
@@ -62,7 +62,7 @@ fn main() {
         was = Some(WAS::new(Arc::clone(&settings_arc)).unwrap());
     }
     debug::write("Start Motor control");
-    let motor_control = Arc::new(Mutex::new(MotorControl::new(Arc::clone(&settings_arc))));
+    let motor_control = Arc::new(Mutex::new(MotorControl::new(Arc::clone(&settings_arc), debug)));
     debug::write("Start AgIO");
     let reader = Reader::new(Arc::clone(&settings_arc), Arc::clone(&motor_control), debug);
     let rc = Arc::clone(&reader.sc.rc);
@@ -87,8 +87,9 @@ fn main() {
             None => (),
         }
         let mut motor = motor_control.lock().unwrap();
-        motor.update_motor(wheel_angle);
+        let pwm_value = motor.update_motor(wheel_angle);
         let mut switch_state: u8 = if motor.switch.is_low() { 0b1111_1101 } else { 0b1111_1111 };
+        drop(motor);
         // Work switch
 
         let rc_lock = rc.lock().unwrap();
@@ -97,8 +98,8 @@ fn main() {
         if work_switch {
             switch_state &= 0b1111_1110;
         }
-        writer.from_autosteer(wheel_angle, heading, roll, switch_state, motor.pwm_value);
+        writer.from_autosteer(wheel_angle, heading, roll, switch_state, pwm_value);
 
-        thread::sleep(Duration::from_millis(10));
+        thread::sleep(Duration::from_millis(100));
     }
 }
