@@ -187,17 +187,12 @@ impl SectionControl {
             let timeout = watchdog_timer.elapsed().as_millis() > WATCHDOG_TIMOUT;
             drop(watchdog_timer);
             let is_manual = manual.is_low();
+            let mut rc = relays_arc.lock().unwrap();
             if timeout && ! is_manual {
-                let mut rc = relays_arc.lock().unwrap();
                 // Shutdown all relays
                 rc.all_off();
-                // debug::write("Timeout shutdown all relays.");
-                // let mut watchdog_timer = timer.lock().unwrap();
-                // *watchdog_timer = Instant::now();
-                // drop(watchdog_timer);
-                }
+            }
             else {
-                let mut rc = relays_arc.lock().unwrap();
                 match rc.mode {
                     RelayMode::OnOff => {
                         rc.relays_on_off(is_manual)
@@ -210,7 +205,9 @@ impl SectionControl {
                     },
                 };
             }
-            thread::sleep(Duration::from_millis(5));
+            drop(rc);
+
+            thread::sleep(Duration::from_millis(2));
         }        
     }
 

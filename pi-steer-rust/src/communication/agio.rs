@@ -1,9 +1,7 @@
-use std::net::{UdpSocket};
+use std::net::UdpSocket;
 use std::thread;
 use std::time::Duration;
 use byteorder::{ByteOrder, LittleEndian};
-// use std::cell::RefCell;
-// use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use crate::hw::motor::MotorControl;
@@ -143,18 +141,6 @@ pub struct Reader {
     debug: bool,
 }
 
-// impl Clone for AgIO {
-//     fn clone(&self) -> Self {
-//         AgIO {
-//             client: self.client.try_clone().expect("REASON"), // Arc<UdpSocket> can be cloned to share the socket
-//             motor: self.motor.clone(), // Arc<Mutex<T>> is inherently cloneable
-//             settings: self.settings.clone(), // Arc<Mutex<T>> is inherently cloneable
-//             sc: self.sc,
-//             debug: self.debug,
-//         }
-//     }
-// }
-
 impl Reader {
     pub fn new(settings: Arc<Mutex<Settings>>, motor: Arc<Mutex<MotorControl>>, debug: bool) -> Reader {
         let set_lock = settings.lock().unwrap();
@@ -193,7 +179,7 @@ impl Reader {
                 },
                 _ => {}
             }
-            thread::sleep(Duration::from_millis(100));
+            thread::sleep(Duration::from_millis(1));
         });
     }
 
@@ -291,18 +277,18 @@ impl Reader {
             },
             FROM_AUTOSTEER => {},
             AUTOSTEER_DATA => {
-                let mut motor = self.motor.lock().unwrap();
                 // let speed = LittleEndian::read_u16(&data[0..2]) as f64 / 10.0;
                 let status = data[2];
                 let steer_angle = LittleEndian::read_i16(&data[3..5]) as f64 / 100.0;
                 let sc = LittleEndian::read_u16(&data[6..8]);
 
-
                 if self.debug {
                     println!("autosteer data");
-                    println!("SC: {:#018b}", sc);
+                    println!("SC: {:#018b}, steer angle: {}", sc, steer_angle);
                 }
+                let mut motor = self.motor.lock().unwrap();
                 motor.set_control(steer_angle, status != 0);
+                drop(motor);
                 self.sc.update(sc);
             },
             _ => (),

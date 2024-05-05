@@ -1,13 +1,15 @@
-use serialport;
+use serialport::{self, SerialPort};
 use std::thread;
 use std::time::Duration;
 use std::io::{BufReader, BufRead};
+use std::net::UdpSocket;
 
 use crate::communication::agio::Writer;
 
 pub struct GPS {
     // debug: bool,
     // orientation: Arc<Mutex<(f32, f32, f32, bool)>>,
+    // port: SerialPortBuilder
 }
 
 // fn build_gga(time: &str, lat: &str, ns: &str, lon: &str, ew: &str, fix: &str, sats: &str, hdop: &str, alt: &str, geoid: &str, age: &str) -> String {
@@ -17,24 +19,28 @@ pub struct GPS {
 // }
 
 impl GPS {
-    pub fn new(debug: bool, port: String) -> Self {
-
-        thread::spawn(move || Self::reader(debug, port));
-        GPS {
-            // debug,
-            // orientation,
-        }
-    }
-
-    fn reader(debug: bool, port: String) {
-        let writer = Writer::new(false, debug);
-        let port_name = format!("/dev/{}", port);
+    pub fn new(debug: bool, serialport: String) -> Self {
+        let port_name = format!("/dev/{}", serialport);
         let baud_rate = 115200;
         if debug { println!("Open serialport") }
         let port = serialport::new(port_name, baud_rate)
             .timeout(Duration::from_millis(100))
             .open()
             .expect("Failed to open serial port");
+        let port_clone = port.try_clone().expect("Failed to clone");
+
+        thread::spawn(move || Self::reader(debug, port_clone ));
+        thread::spawn(move || Self::udp_reader(debug, port ));
+        GPS {
+            // debug,
+            // orientation,
+            // port
+        }
+    }
+
+    fn reader(debug: bool, port: Box<dyn SerialPort> ) {
+
+        let writer = Writer::new(false, debug);
 
         let mut reader = BufReader::new(port);
 
@@ -96,6 +102,31 @@ impl GPS {
         
     }
 
+    pub fn udp_reader(_debug: bool, mut port: Box<dyn SerialPort> ) {
+        let server = UdpSocket::bind("0.0.0.0:2233").unwrap();
+        server.set_broadcast(true).unwrap();
+        server.set_nonblocking(true).unwrap();
+        // let mut writer = BufWriter::new(port);
+
+        let mut buf = [0u8; 1024];
+    
+        // Reader thread to listen for incoming messages
+        loop {
+            match server.recv_from(&mut buf) {
+                Ok((size, _addr)) => {
+                    let _ = port.write_all(&buf[..size]);
+                },
+                Err(e) if e.kind() != std::io::ErrorKind::WouldBlock => {
+                    eprintln!("Read socket error: {:?}", e);
+                    break;
+                },
+                _ => {}
+            }
+            thread::sleep(Duration::from_millis(1));
+        }
+    }
+
+
 }
 
 
@@ -106,8 +137,6 @@ mod gps {
     #[test]
     fn gps() {
         let _gps = GPS::new(true, "serial0".to_string());
-        thread::sleep(Duration::from_millis(5000));
-        let _gps2 = GPS::new(true, "serial1".to_string());
         thread::sleep(Duration::from_millis(5000));
     }
 }

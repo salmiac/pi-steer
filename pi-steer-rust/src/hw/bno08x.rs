@@ -74,7 +74,7 @@ impl BNO08X {
                     }
                 }
             }
-            thread::sleep(Duration::from_millis(1)); // Adjust based on your needs
+            thread::sleep(Duration::from_millis(2)); // Adjust based on your needs
         }
     }
 

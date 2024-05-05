@@ -8,7 +8,7 @@ pub mod hw;
 pub mod config;
 pub mod communication;
 
-use crate::hw::{motor::MotorControl, imu::IMU, was::WAS, gps::GPS};
+use crate::hw::{motor::MotorControl, imu::IMU, was::WAS, gps::GPS, pwm::PwmControl};
 use crate::config::settings::Settings;
 use crate::communication::agio::{Reader, Writer};
 
@@ -54,7 +54,7 @@ fn main() {
         imu = Some(IMU::new(false).unwrap());
     }
     if ! gps_port.is_empty() {
-        _gps = GPS::new(false, gps_port);
+        _gps = GPS::new(debug, gps_port);
     }
     let mut was: Option<WAS> = None;
     if is_was {
@@ -64,7 +64,7 @@ fn main() {
     debug::write("Start Motor control");
     let motor_control = Arc::new(Mutex::new(MotorControl::new(Arc::clone(&settings_arc), debug)));
     debug::write("Start AgIO");
-    let reader = Reader::new(Arc::clone(&settings_arc), Arc::clone(&motor_control), debug);
+    let reader = Reader::new(Arc::clone(&settings_arc), Arc::clone(&motor_control), false);
     let rc = Arc::clone(&reader.sc.rc);
     reader.start();
     
@@ -73,25 +73,26 @@ fn main() {
     
     let writer = Writer::new(is_imu, debug);
 
+    let mut pwm = PwmControl::new(16);
     debug::write("Start loop");
+
     loop {
         // Your processing logic here
         // Example:
         if let Some(imu) = &imu {
             (heading, roll, _) = imu.read();
         }
-
+        
         let mut wheel_angle: f64 = 0.0;
         match was {
             Some(ref mut w) => wheel_angle = w.read(),
             None => (),
         }
         let mut motor = motor_control.lock().unwrap();
-        let pwm_value = motor.update_motor(wheel_angle);
+        let (direction, pwm_value) = motor.update_motor(wheel_angle);
         let mut switch_state: u8 = if motor.switch.is_low() { 0b1111_1101 } else { 0b1111_1111 };
         drop(motor);
-        // Work switch
-
+        pwm.set(direction, pwm_value);
         let rc_lock = rc.lock().unwrap();
         let work_switch = rc_lock.work_switch.is_low();
         drop(rc_lock);
@@ -100,6 +101,6 @@ fn main() {
         }
         writer.from_autosteer(wheel_angle, heading, roll, switch_state, pwm_value);
 
-        thread::sleep(Duration::from_millis(100));
+        thread::sleep(Duration::from_millis(10));
     }
 }

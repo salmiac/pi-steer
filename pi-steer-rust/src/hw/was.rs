@@ -21,12 +21,13 @@ impl WAS {
     }
 
     pub fn read(&mut self) -> f64 {
-        let settings = self.settings.lock().unwrap();
         let adc = self.device.read().unwrap_or(0);
+        let settings = self.settings.lock().unwrap();
         let mut angle = (adc as f64 / 16383.5 - 1.0) * 5.0 / 4.0 * 60.0 * settings.counts_per_deg as f64 / 100.0 + settings.steer_offset;
         if settings.invert_was {
             angle = -angle;
         }
+        drop(settings);
         angle = angle.clamp(-MAXANGLE, MAXANGLE);
         angle
     }
