@@ -160,8 +160,8 @@ impl Reader {
         server.set_broadcast(true).unwrap();
         server.set_nonblocking(true).unwrap();
 
-        let agio_arc = Arc::new(Mutex::new(self));
-        let agio_clone = Arc::clone(&agio_arc);
+        // let agio_arc = Arc::new(Mutex::new(self));
+        // let agio_clone = Arc::clone(&agio_arc);
     
         // Reader thread to listen for incoming messages
         let _reader_thread = thread::spawn(move || loop {
@@ -169,17 +169,17 @@ impl Reader {
             match server.recv_from(&mut buf) {
                 Ok((size, _addr)) => {
                     if size >= 6 {
-                        let mut _agio = agio_clone.lock().unwrap();
-                        _agio.decode_data(&buf[..size]);
+                        // let mut _agio = agio_clone.lock().unwrap();
+                        // _agio.decode_data(&buf[..size]);
+                        self.decode_data(&buf[..size]);
                     }
                 },
                 Err(e) if e.kind() != std::io::ErrorKind::WouldBlock => {
                     eprintln!("Read socket error: {:?}", e);
                     break;
                 },
-                _ => {}
+                _ => {thread::sleep(Duration::from_millis(5));}
             }
-            thread::sleep(Duration::from_millis(1));
         });
     }
 
