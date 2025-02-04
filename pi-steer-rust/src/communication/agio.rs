@@ -41,7 +41,7 @@ impl Writer {
         }
     }
 
-    pub fn from_autosteer(&self, wheel_angle: f64, heading: f32, roll: f32, switch: u8, pwm_value: f64) {
+    pub fn from_autosteer(&self, wheel_angle: f32, heading: f32, roll: f32, switch: u8, pwm_value: f32) {
         let mut data = vec![0x80, 0x81, 0x7e, 0xfd, 0x08];
         
         let pwm_display = (pwm_value * 2.55) as u8;
@@ -227,7 +227,7 @@ impl Reader {
             RELAY_CONFIG => {},
             MACHINE_DATA => {
                 // let uturn = data[0];
-                // let speed = data[1] as f64 / 10.0;
+                // let speed = data[1] as f32 / 10.0;
                 // let hyd_lift = data[2];
                 // let tram = data[3];
                 // let geo_stop = data[4];
@@ -267,7 +267,7 @@ impl Reader {
                 settings.low_pwm = data[2];
                 settings.min_pwm = data[3];
                 settings.counts_per_deg = data[4];
-                settings.steer_offset = LittleEndian::read_i16(&data[5..7]) as f64 / 100.0;
+                settings.steer_offset = LittleEndian::read_i16(&data[5..7]) as f32 / 100.0;
                 settings.ackerman_fix = data[7];
 
                 if self.debug {
@@ -277,9 +277,9 @@ impl Reader {
             },
             FROM_AUTOSTEER => {},
             AUTOSTEER_DATA => {
-                // let speed = LittleEndian::read_u16(&data[0..2]) as f64 / 10.0;
+                // let speed = LittleEndian::read_u16(&data[0..2]) as f32 / 10.0;
                 let status = data[2];
-                let steer_angle = LittleEndian::read_i16(&data[3..5]) as f64 / 100.0;
+                let steer_angle = LittleEndian::read_i16(&data[3..5]) as f32 / 100.0;
                 let sc = LittleEndian::read_u16(&data[6..8]);
 
                 if self.debug {

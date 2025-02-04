@@ -9,7 +9,7 @@ pub struct Settings {
     pub low_pwm: u8,
     pub min_pwm: u8,
     pub counts_per_deg: u8,
-    pub steer_offset: f64,
+    pub steer_offset: f32,
     pub ackerman_fix: u8,
     pub invert_was: bool,
     pub steer_invert_relays: bool,

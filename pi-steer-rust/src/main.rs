@@ -83,7 +83,7 @@ fn main() {
             (heading, roll, _) = imu.read();
         }
         
-        let mut wheel_angle: f64 = 0.0;
+        let mut wheel_angle: f32 = 0.0;
         match was {
             Some(ref mut w) => wheel_angle = w.read(),
             None => (),

@@ -18,7 +18,7 @@ impl PwmControl {
         }
     }
 
-    pub fn set(&mut self, direction: bool, pwm_value: f64) {
+    pub fn set(&mut self, direction: bool, pwm_value: f32) {
         self.direction_pin.write(if direction { rppal::gpio::Level::High } else { rppal::gpio::Level::Low });
         self.pwm.set_duty_cycle(pwm_value / 100.0).unwrap(); // Assuming the duty cycle is set as a percentage
     }
@@ -35,11 +35,11 @@ mod tests {
         let mut pwm_control = PwmControl::new(16);
         for n in 1..255{
             thread::sleep(Duration::from_millis(50));
-            pwm_control.set(true, f64::from(n));
+            pwm_control.set(true, f32::from(n));
         }
         for n in 1..255{
             thread::sleep(Duration::from_millis(50));
-            pwm_control.set(false, f64::from(n));
+            pwm_control.set(false, f32::from(n));
         }
         pwm_control.set(true, 0.0);
     }
