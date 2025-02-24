@@ -2,10 +2,8 @@ use std::net::UdpSocket;
 use std::thread;
 use std::time::Duration;
 use byteorder::{ByteOrder, LittleEndian};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 
-use crate::hw::motor::MotorControl;
-use crate::hw::section_control::SectionControl;
 use crate::config::settings::Settings;
 
 const HELLO: u8 = 0xc7;
@@ -41,7 +39,7 @@ impl Writer {
         }
     }
 
-    pub fn from_autosteer(&self, wheel_angle: f32, heading: f32, roll: f32, switch: u8, pwm_value: f32) {
+    pub fn from_autosteer(&self, wheel_angle: f32, heading: f32, roll: f32, switch: u8, pwm_value: f64) {
         let mut data = vec![0x80, 0x81, 0x7e, 0xfd, 0x08];
         
         let pwm_display = (pwm_value * 2.55) as u8;
@@ -135,43 +133,36 @@ impl Writer {
 }
 
 pub struct Reader {
-    motor: Arc<Mutex<MotorControl>>,
     settings: Arc<Mutex<Settings>>,
-    pub sc: SectionControl,
+    sections: RwLock<u16>,
+    steer_angle: RwLock<f32>,
+    status: RwLock<bool>,
+    speed: RwLock<f32>,
     debug: bool,
 }
 
 impl Reader {
-    pub fn new(settings: Arc<Mutex<Settings>>, motor: Arc<Mutex<MotorControl>>, debug: bool) -> Reader {
-        let set_lock = settings.lock().unwrap();
-        println!("Relay mode reader {}", set_lock.relay_mode);
-        let sc = SectionControl::new(set_lock.relay_mode, set_lock.impulse_seconds, set_lock.impulse_gpio.clone(), set_lock.relay_gpio.clone(), set_lock.input_gpio.clone(), set_lock.work_switch ).unwrap();
-        drop(set_lock);
-        Reader { 
-            motor, 
-            settings: Arc::clone(&settings), 
-            sc,
-            debug 
-        }
-    }
-
-    pub fn start(self) {
+    pub fn new(settings: Arc<Mutex<Settings>>, debug: bool) -> Reader {
         let server = UdpSocket::bind("0.0.0.0:8888").unwrap();
         server.set_broadcast(true).unwrap();
         server.set_nonblocking(true).unwrap();
 
-        // let agio_arc = Arc::new(Mutex::new(self));
-        // let agio_clone = Arc::clone(&agio_arc);
-    
+        let reader =         Reader { 
+            settings: Arc::clone(&settings), 
+            sections: RwLock::new(0 as u16),
+            steer_angle: RwLock::new(0.0 as f32),
+            status: RwLock::new(false),
+            speed: RwLock::new(0.0 as f32),
+            debug 
+        };
+
         // Reader thread to listen for incoming messages
-        let _reader_thread = thread::spawn(move || loop {
+        thread::spawn(move || loop {
             let mut buf = [0u8; 1024];
             match server.recv_from(&mut buf) {
                 Ok((size, _addr)) => {
                     if size >= 6 {
-                        // let mut _agio = agio_clone.lock().unwrap();
-                        // _agio.decode_data(&buf[..size]);
-                        self.decode_data(&buf[..size]);
+                        reader.decode_data(&buf[..size]);
                     }
                 },
                 Err(e) if e.kind() != std::io::ErrorKind::WouldBlock => {
@@ -181,6 +172,24 @@ impl Reader {
                 _ => {thread::sleep(Duration::from_millis(5));}
             }
         });
+
+        reader
+
+    }
+
+    pub fn get_speed(self) -> f32 {
+        let speed = self.speed.read().unwrap();
+        *speed
+    }
+
+    pub fn get_status(self) -> bool {
+        let status = self.status.read().unwrap();
+        *status
+    }
+
+    pub fn get_steer_angle(self) -> f32 {
+        let steer_angle = self.steer_angle.read().unwrap();
+        *steer_angle
     }
 
     fn decode_data(&mut self, data: &[u8]) -> Option<()> {
@@ -236,7 +245,8 @@ impl Reader {
                 if self.debug {
                     println!("machine data");
                 }
-                self.sc.update(sc);
+                let mut sections = self.sections.write().unwrap();
+                *sections = sc;
             },
             STEER_CONFIG => {
                 let mut settings = self.settings.lock().unwrap();
@@ -277,7 +287,7 @@ impl Reader {
             },
             FROM_AUTOSTEER => {},
             AUTOSTEER_DATA => {
-                // let speed = LittleEndian::read_u16(&data[0..2]) as f32 / 10.0;
+                let speed = LittleEndian::read_u16(&data[0..2]) as f32 / 10.0;
                 let status = data[2];
                 let steer_angle = LittleEndian::read_i16(&data[3..5]) as f32 / 100.0;
                 let sc = LittleEndian::read_u16(&data[6..8]);
@@ -286,10 +296,14 @@ impl Reader {
                     println!("autosteer data");
                     println!("SC: {:#018b}, steer angle: {}", sc, steer_angle);
                 }
-                let mut motor = self.motor.lock().unwrap();
-                motor.set_control(steer_angle, status != 0);
-                drop(motor);
-                self.sc.update(sc);
+                let mut _steer_angle = self.steer_angle.write().unwrap();
+                *_steer_angle = steer_angle;
+                let mut _status = self.status.write().unwrap();
+                *_status = status != 0;
+                let mut _speed = self.speed.write().unwrap();
+                *_speed = speed;
+                let mut sections = self.sections.write().unwrap();
+                *sections = sc;
             },
             _ => (),
         }

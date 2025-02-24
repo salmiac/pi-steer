@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use serde_json::{Result as JsonResult};
+use serde_json::Result as JsonResult;
 use std::{fs::File, io::Read, io::Write};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -24,15 +24,21 @@ pub struct Settings {
     pub bno085: bool,
     pub relay_mode: u8,
     pub impulse_seconds: f32,
+    pub section_control_enable: bool,
     pub impulse_gpio: Vec<u8>,
     pub relay_gpio: Vec<u8>,
     pub input_gpio: Vec<u8>,
-    pub work_switch: u8,
-    pub autosteer_switch: u8,
+    pub work_switch_gpio: u8,
+    pub autosteer_switch_gpio: u8,
     pub pwm_direction: u8,
     pub was: bool,
+    pub steer_control: bool,
     pub gps: String,
-    // TODO pin settings
+    pub sprayer_pressure_control: bool,
+    pub sprayer_pressure_multiplier: f32,
+    pub sprayer_pressure_add: f32,
+    pub pressure_control_up_gpio: u8,
+    pub pressure_control_down_gpio: u8,
     #[serde(skip)]
     debug: bool,
 }
@@ -60,14 +66,21 @@ impl Settings {
             bno085: false,
             relay_mode: 0,
             impulse_seconds: 4.0,
+            section_control_enable: true,
             impulse_gpio: [4, 17].to_vec(),
             relay_gpio: [4, 17, 22, 10, 9, 11, 0, 5, 6, 21].to_vec(),
             input_gpio: [26, 18, 23, 24, 25].to_vec(),
-            work_switch: 13,
-            autosteer_switch: 27,
+            work_switch_gpio: 13,
+            autosteer_switch_gpio: 27,
             pwm_direction: 16,
             was: true,
+            steer_control: true,
             gps: "serial0".to_string(),
+            sprayer_pressure_control: false,
+            sprayer_pressure_multiplier: 2.51,
+            sprayer_pressure_add: -1.33,
+            pressure_control_up_gpio: 7,
+            pressure_control_down_gpio: 8,
             debug,
         };
         settings.load_settings()

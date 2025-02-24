@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 use rppal::gpio::{Gpio, InputPin};
+use crate::hw::pwm::PwmControl;
 
 use crate::config::settings::Settings;
 
@@ -11,13 +12,17 @@ pub struct MotorControl {
     target_angle: f32,
     ok_to_run: bool,
     settings: Arc<Mutex<Settings>>,
+    pub pwm: PwmControl,
     debug: bool
 }
 
 impl MotorControl {
     pub fn new(settings: Arc<Mutex<Settings>>, debug: bool) -> Self {
         let gpio = Gpio::new().unwrap();
-        let switch = gpio.get(27).unwrap().into_input_pullup();
+        let _settings = settings.lock().unwrap();
+        let switch = gpio.get(_settings.autosteer_switch_gpio).unwrap().into_input_pullup();
+        let pwm = PwmControl::new(_settings.pwm_direction);
+        drop(_settings);
         
         MotorControl {
             switch,
@@ -25,6 +30,7 @@ impl MotorControl {
             target_angle: 0.0,
             ok_to_run: false,
             settings,
+            pwm,
             debug
         }
     }
@@ -53,7 +59,7 @@ impl MotorControl {
         (direction, pwm_value)
     }
 
-    pub fn update_motor(&mut self, wheel_angle: f33) -> (bool, f32) {
+    pub fn update_motor(&mut self, wheel_angle: f32) -> (bool, f64) {
         if self.switch.is_low() && !self.running && self.ok_to_run {
             self.running = true;
             if self.debug {
@@ -77,7 +83,7 @@ impl MotorControl {
             }
         }
 
-        (direction, pwm_value)
+        (direction, pwm_value.into())
     }
 
     pub fn set_control(&mut self, steer_angle: f32, status: bool) {

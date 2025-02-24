@@ -6,3 +6,4 @@ pub mod was;
 pub mod imu;
 pub mod section_control;
 pub mod pwm;
+pub mod pressure_control;

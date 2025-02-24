@@ -1,16 +1,8 @@
-// use std::sync::{Mutex, Arc};
 use rppal::gpio::{Gpio, OutputPin, InputPin};
-// use std::thread;
 use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-// use crate::debug;
-
-// TODO asetuksiin nämä
-// const IMPULSE_PINS: [u8; 2] = [4, 17];
-// const RELAY_PINS: [u8; 14] = [4, 17, 22, 10, 9, 11, 0, 5, 6, 21, 20, 1, 7, 8];
-// const SWITCH_PINS: [u8; 5] = [26, 18, 23, 24, 25];
 const WATCHDOG_TIMOUT: u128 = 2000;
 
 enum RelayMode {

@@ -21,7 +21,7 @@ impl WAS {
     }
 
     pub fn read(&mut self) -> f32 {
-        let adc = self.device.read(0).unwrap_or(0);
+        let adc = self.device.read(0).unwrap_or(0.0);
         let settings = self.settings.lock().unwrap();
         let mut angle = (adc - 2.5) / 4.0 * 60.0 * settings.counts_per_deg as f32 / 100.0 + settings.steer_offset;
         if settings.invert_was {
