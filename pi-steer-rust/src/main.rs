@@ -1,6 +1,6 @@
 use clap::{Arg, Command};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex};
 
 pub mod debug;
@@ -8,7 +8,15 @@ pub mod hw;
 pub mod config;
 pub mod communication;
 
-use crate::hw::{motor::MotorControl, imu::IMU, was::WAS, gps::GPS, pressure_control::PressureControl, section_control::SectionControl};
+use crate::hw::{
+    motor::MotorControl, 
+    imu::IMU, 
+    was::WAS, 
+    gps::GPS, 
+    pressure_control::PressureControl, 
+    pressure_sensor::PressureSensor, 
+    section_control::SectionControl
+};
 use crate::config::settings::Settings;
 use crate::communication::agio::{Reader, Writer};
 
@@ -68,12 +76,12 @@ fn main() {
 
     // Init sprayer pressure controller
     let mut pressure_control: Option<PressureControl> = None;
+    let mut pressure_sensor = PressureSensor::new(settings.pressure_sensor, settings.sprayer_pressure_multiplier, settings.sprayer_pressure_add).expect("Is ADC present?");
     if settings.sprayer_pressure_control {
         pressure_control = Some(PressureControl::new(
             settings.sprayer_pressure_control, 
             settings.pressure_control_up_gpio, 
-            settings.pressure_control_down_gpio, 
-            debug
+            settings.pressure_control_down_gpio
         ));
     }
     
@@ -101,19 +109,22 @@ fn main() {
 
     // Init AgIO communication
     debug::write("Start AgIO");
-    let reader = Reader::new(Arc::clone(&settings_arc), false);
-    reader.start();
+    let pgn_data = Reader::new(Arc::clone(&settings_arc), false);
     
     let mut heading: f32 = 0.0;
     let mut roll: f32 = 0.0;
     
     let writer = Writer::new(is_imu, debug);
+    let mut timer = Instant::now();
+    let send_period = Duration::from_millis(50);
 
     debug::write("Start loop");
-
     loop {
+        let mut send_autosteer_state = false;
+
         if let Some(imu) = &imu {
             (heading, roll, _) = imu.read();
+            send_autosteer_state = true;
         }
         
         let mut wheel_angle: f32 = 0.0;
@@ -123,39 +134,49 @@ fn main() {
         }
         let mut switch_state: u8 = 0b1111_1111;
         let pwm_value = 0.0;
+
         match motor_control {
             Some(ref mut motor_control) => {
-                motor_control.set_control(reader.get_steer_angle(), reader.get_status());
+                motor_control.set_control(*pgn_data.steer_angle.read().unwrap(), *pgn_data.status.read().unwrap());
                 let (direction, pwm_value) = motor_control.update_motor(wheel_angle);
                 if motor_control.switch.is_low() { 
                     switch_state = 0b1111_1101 
                 };
                 motor_control.pwm.set(direction, pwm_value);
+                send_autosteer_state = true;
             },
             None => ()
         }
+
         match pressure_control {
             Some(ref mut pressure_control) => {
-                pressure_control.set_speed(reader.get_speed());
+                pressure_control.current_pressure = pressure_sensor.read();
+                pressure_control.set_speed(*pgn_data.speed.read().unwrap());
                 pressure_control.update_control();
             },
             None => ()
         }
         
         let mut work_switch = false;
+
         match section_control {
             Some(ref mut sc) => {
                 let rc_lock = sc.rc.lock().unwrap();
                 work_switch = rc_lock.work_switch.is_low();
+                send_autosteer_state = true;
             },
             None => ()
         }
 
-        if work_switch {
-            switch_state &= 0b1111_1110;
+        // Send frequency is 20 Hz        
+        if send_autosteer_state && timer.elapsed() < send_period {
+            if work_switch {
+                switch_state &= 0b1111_1110;
+            }
+            writer.from_autosteer(wheel_angle, heading, roll, switch_state, pwm_value);
+            timer = Instant::now();
         }
-        writer.from_autosteer(wheel_angle, heading, roll, switch_state, pwm_value);
 
-        thread::sleep(Duration::from_millis(10));
+        thread::sleep(Duration::from_millis(2));
     }
 }

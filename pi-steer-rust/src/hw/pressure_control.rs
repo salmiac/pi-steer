@@ -12,7 +12,7 @@ pub struct PressureControl {
     pub active: bool,
     pub nominal_pressure: f32,
     target_pressure: f32,
-    current_pressure: f32,
+    pub current_pressure: f32,
     pub constant_pressure: bool,
     up_gpio: OutputPin,
     down_gpio: OutputPin,
@@ -25,11 +25,10 @@ pub struct PressureControl {
     off_timer: Instant,
     control_on: bool,
     pub speed: f32,
-    debug: bool
 }
 
 impl PressureControl {
-    pub fn new(enabled: bool, up_gpio_pin: u8, down_gpio_pin: u8, debug: bool) -> Self {
+    pub fn new(enabled: bool, up_gpio_pin: u8, down_gpio_pin: u8) -> Self {
         let gpio = Gpio::new().unwrap();
         let mut up_gpio = gpio.get(up_gpio_pin).unwrap().into_output();
         let mut down_gpio = gpio.get(down_gpio_pin).unwrap().into_output();
@@ -53,7 +52,6 @@ impl PressureControl {
             off_timer: Instant::now(),
             control_on: false,
             speed: 0.0,
-            debug
         }
     }
 
@@ -139,7 +137,7 @@ mod tests {
 
     #[test]
     fn motortest() {
-        let _pressure_control = PressureControl::new(true,  7, 8, true);
+        let _pressure_control = PressureControl::new(true,  7, 8);
     }
 }
 

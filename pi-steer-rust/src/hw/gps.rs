@@ -102,6 +102,7 @@ impl GPS {
         
     }
 
+    // Read RTK correction and send it to GPS.
     pub fn udp_reader(_debug: bool, mut port: Box<dyn SerialPort> ) {
         let server = UdpSocket::bind("0.0.0.0:2233").unwrap();
         server.set_broadcast(true).unwrap();

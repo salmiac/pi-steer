@@ -132,37 +132,58 @@ impl Writer {
     
 }
 
-pub struct Reader {
+pub struct PgnData {
+    pub sections: RwLock<u16>,
+    pub steer_angle: RwLock<f32>,
+    pub status: RwLock<bool>,
+    pub speed: RwLock<f32>,
+}
+
+impl PgnData {
+    pub fn get_sections(&self) -> u16 {
+        *self.sections.read().unwrap()
+    }
+}
+pub struct Pgn {
     settings: Arc<Mutex<Settings>>,
-    sections: RwLock<u16>,
-    steer_angle: RwLock<f32>,
-    status: RwLock<bool>,
-    speed: RwLock<f32>,
+    pgn_data: Arc<PgnData>,
     debug: bool,
+}
+pub struct Reader {
 }
 
 impl Reader {
-    pub fn new(settings: Arc<Mutex<Settings>>, debug: bool) -> Reader {
-        let server = UdpSocket::bind("0.0.0.0:8888").unwrap();
-        server.set_broadcast(true).unwrap();
-        server.set_nonblocking(true).unwrap();
-
-        let reader =         Reader { 
-            settings: Arc::clone(&settings), 
+    pub fn new(settings: Arc<Mutex<Settings>>, debug: bool) -> Arc<PgnData> {
+        let pgn_data = Arc::new(PgnData {
             sections: RwLock::new(0 as u16),
             steer_angle: RwLock::new(0.0 as f32),
             status: RwLock::new(false),
             speed: RwLock::new(0.0 as f32),
+        });
+
+        let pgn_clone = Arc::clone(&pgn_data.clone());
+
+        // Reader thread to listen for incoming messages
+        thread::spawn(move || Self::reader_thread(settings, pgn_clone, debug));
+        pgn_data
+    }
+
+    pub fn reader_thread( settings: Arc<Mutex<Settings>>, pgn_data: Arc<PgnData>, debug: bool ) {
+        let mut pgn = Pgn { 
+            settings, 
+            pgn_data,
             debug 
         };
 
-        // Reader thread to listen for incoming messages
-        thread::spawn(move || loop {
-            let mut buf = [0u8; 1024];
+        let server = UdpSocket::bind("0.0.0.0:8888").unwrap();
+        server.set_broadcast(true).unwrap();
+        server.set_nonblocking(true).unwrap();
+        let mut buf = [0u8; 1024];
+        loop {
             match server.recv_from(&mut buf) {
                 Ok((size, _addr)) => {
                     if size >= 6 {
-                        reader.decode_data(&buf[..size]);
+                        pgn.decode_data(&buf[..size]);
                     }
                 },
                 Err(e) if e.kind() != std::io::ErrorKind::WouldBlock => {
@@ -171,24 +192,32 @@ impl Reader {
                 },
                 _ => {thread::sleep(Duration::from_millis(5));}
             }
-        });
+        }
+    }
+}
 
-        reader
+impl Pgn {
 
+    pub fn new(settings: Arc<Mutex<Settings>>, pgn_data: Arc<PgnData>, debug: bool) -> Pgn {
+        Pgn { 
+            settings: settings, 
+            pgn_data,
+            debug 
+        }
     }
 
     pub fn get_speed(self) -> f32 {
-        let speed = self.speed.read().unwrap();
+        let speed = self.pgn_data.speed.read().unwrap();
         *speed
     }
 
     pub fn get_status(self) -> bool {
-        let status = self.status.read().unwrap();
+        let status = self.pgn_data.status.read().unwrap();
         *status
     }
 
     pub fn get_steer_angle(self) -> f32 {
-        let steer_angle = self.steer_angle.read().unwrap();
+        let steer_angle = self.pgn_data.steer_angle.read().unwrap();
         *steer_angle
     }
 
@@ -245,7 +274,7 @@ impl Reader {
                 if self.debug {
                     println!("machine data");
                 }
-                let mut sections = self.sections.write().unwrap();
+                let mut sections = self.pgn_data.sections.write().unwrap();
                 *sections = sc;
             },
             STEER_CONFIG => {
@@ -296,13 +325,13 @@ impl Reader {
                     println!("autosteer data");
                     println!("SC: {:#018b}, steer angle: {}", sc, steer_angle);
                 }
-                let mut _steer_angle = self.steer_angle.write().unwrap();
+                let mut _steer_angle = self.pgn_data.steer_angle.write().unwrap();
                 *_steer_angle = steer_angle;
-                let mut _status = self.status.write().unwrap();
+                let mut _status = self.pgn_data.status.write().unwrap();
                 *_status = status != 0;
-                let mut _speed = self.speed.write().unwrap();
+                let mut _speed = self.pgn_data.speed.write().unwrap();
                 *_speed = speed;
-                let mut sections = self.sections.write().unwrap();
+                let mut sections = self.pgn_data.sections.write().unwrap();
                 *sections = sc;
             },
             _ => (),
