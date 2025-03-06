@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Result as JsonResult;
 use std::{fs::File, io::Read, io::Write};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Settings {
     pub gain_p: u8,
     pub high_pwm: u8,
@@ -92,15 +92,21 @@ impl Settings {
                 let mut contents = String::new();
                 if let Err(err) = file.read_to_string(&mut contents) {
                     self.log(&format!("Read file error: {}", err));
-                    return self;
                 }
                 let updated_settings: JsonResult<Settings> = serde_json::from_str::<Settings>(&contents);
                 match updated_settings {
-                    Ok(_json) => {
-                        return _json;
+                    Ok(json) => {
+                        if serde_json::to_string_pretty(&json).unwrap() != serde_json::to_string_pretty(&self).unwrap() {
+                            self = json;
+                            println!("json changed");
+                            self.save_settings();
+                        }
                         // Assuming manual merging of settings is required. Implement as needed.
                     },
-                    Err(err) => self.log(&format!("JSON parse error: {}", err)),
+                    Err(err) => {
+                        println!("JSON parse error: {}", err);
+                        std::process::exit(1)
+                    } ,
                 }
             },
             Err(_) => {
@@ -108,13 +114,13 @@ impl Settings {
                 self.save_settings();
             },
         }
-        return self;
+        self
     }
 
     pub fn save_settings(&mut self) {
         match File::create("settings.json") {
             Ok(mut file) => {
-                if let Err(err) = file.write_all(serde_json::to_string(&self).unwrap().as_bytes()) {
+                if let Err(err) = file.write_all(serde_json::to_string_pretty(&self).unwrap().as_bytes()) {
                     self.log(&format!("Write file error: {}", err));
                     return;
                 }
