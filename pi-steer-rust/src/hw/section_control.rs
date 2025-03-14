@@ -34,11 +34,11 @@ pub struct RelayControl {
     mode: RelayMode,
     impulse_seconds: f32,
     pub sections: u16,
-    pub work_switch: InputPin,
+    pub work_switch_gpio: InputPin,
 }
 
 impl RelayControl {
-    pub fn new(mode: u8, impulse_seconds: f32, _impulse_gpio: Vec<u8>, _relay_gpio: Vec<u8>, _input_gpio: Vec<u8>, work_switch: u8) -> RelayControl {
+    pub fn new(mode: u8, impulse_seconds: f32, _impulse_gpio: Vec<u8>, _relay_gpio: Vec<u8>, _input_gpio: Vec<u8>, work_switch_gpio: u8) -> RelayControl {
         let gpio = Gpio::new().expect("Failed to initialize GPIO");
 
         let mut impulse_gpio: Vec<OutputPin> = Vec::<OutputPin>::new();
@@ -72,7 +72,7 @@ impl RelayControl {
             },
             impulse_seconds,
             sections: 0x0000,
-            work_switch: gpio.get(work_switch).unwrap().into_input_pullup(),
+            work_switch_gpio: gpio.get(work_switch_gpio).unwrap().into_input_pullup(),
             input_gpio: _input_gpio.iter()
                 .map(|&pin| gpio.get(pin).expect("Failed to access GPIO pin").into_input_pullup())
                 .collect(),
@@ -80,7 +80,7 @@ impl RelayControl {
     }
 
     fn get_sections(&mut self, manual: bool) -> u16 {
-        let work_switch = self.work_switch.is_low();
+        let work_switch = self.work_switch_gpio.is_low();
         let mut sc = self.sections;
         let manual_sc = get_input(&self.input_gpio);
         if ! work_switch {
@@ -157,23 +157,31 @@ pub struct SectionControl {
 }
 
 impl SectionControl {
-    pub fn new(relay_mode: u8, impulse_seconds: f32, impulse_gpio: Vec<u8>, relay_gpio: Vec<u8>, input_gpio: Vec<u8>, work_switch: u8) -> rppal::gpio::Result<SectionControl> {
+    pub fn new(
+            relay_mode: u8, 
+            impulse_seconds: f32, 
+            impulse_gpio: Vec<u8>, 
+            relay_gpio: Vec<u8>, 
+            input_gpio: Vec<u8>,
+            work_switch: u8,
+            motor_pwm_gpio: u8
+        ) -> rppal::gpio::Result<SectionControl> {
         let watchdog_timer = Arc::new(Mutex::new(Instant::now()));
         println!("Relay mode {}", relay_mode);
         let rc = Arc::new(Mutex::new(RelayControl::new(relay_mode, impulse_seconds, impulse_gpio, relay_gpio, input_gpio, work_switch)));
 
         let watchdog_clone = Arc::clone(&watchdog_timer);
         let rc_clone = Arc::clone(&rc);
-        thread::spawn(move || Self::watchdog(watchdog_clone, rc_clone));
+        thread::spawn(move || Self::watchdog(watchdog_clone, rc_clone, motor_pwm_gpio));
         Ok(SectionControl {
             watchdog_timer,
             rc,
         })
     }
 
-    fn watchdog(timer: Arc<Mutex<Instant>>, relays_arc: Arc<Mutex<RelayControl>>) {
+    fn watchdog(timer: Arc<Mutex<Instant>>, relays_arc: Arc<Mutex<RelayControl>>, motor_pwm_gpio: u8) {
         let gpio = Gpio::new().expect("Failed to initialize GPIO");
-        let manual = gpio.get(19).expect("Failed to access GPIO pin").into_input_pullup();
+        let manual = gpio.get(motor_pwm_gpio).expect("Failed to access GPIO pin").into_input_pullup();
         loop {
             let watchdog_timer = timer.lock().unwrap();
             let timeout = watchdog_timer.elapsed().as_millis() > WATCHDOG_TIMOUT;
@@ -221,7 +229,7 @@ mod section_control {
         let impulse_gpio: Vec<u8> = [4, 17].to_vec();
         let relay_gpio: Vec<u8> = [4, 17, 22, 10, 9, 11, 0, 5, 6, 21].to_vec();
         let input_gpio: Vec<u8> = [26, 18, 23, 24, 25].to_vec();
-        let mut section_control = SectionControl::new(3, 2.0, impulse_gpio, relay_gpio, input_gpio, 13).unwrap();
+        let mut section_control = SectionControl::new(3, 2.0, impulse_gpio, relay_gpio, input_gpio, 13, 19).unwrap();
         // Simulate an update call with some status code `sc`
         section_control.update(0b1010101010101010); // Example SC value
         thread::sleep(Duration::from_millis(500));

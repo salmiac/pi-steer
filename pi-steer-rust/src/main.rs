@@ -81,7 +81,8 @@ fn main() {
         pressure_control = Some(PressureControl::new(
             settings.sprayer_pressure_control, 
             settings.pressure_control_up_gpio, 
-            settings.pressure_control_down_gpio
+            settings.pressure_control_down_gpio,
+            settings.sprayer_boom_locked_gpio
         ));
     }
     
@@ -94,7 +95,8 @@ fn main() {
             settings.impulse_gpio.clone(), 
             settings.relay_gpio.clone(), 
             settings.input_gpio.clone(), 
-            settings.work_switch_gpio
+            settings.work_switch_gpio,
+            settings.motor_pwm_gpio
         ).unwrap());
     }
     drop(settings);
@@ -152,6 +154,15 @@ fn main() {
             Some(ref mut pressure_control) => {
                 pressure_control.current_pressure = pressure_sensor.read();
                 pressure_control.set_speed(*pgn_data.speed.read().unwrap());
+                pressure_control.nozzle_size = *pgn_data.nozzle_size.read().unwrap();
+                pressure_control.nozzle_spacing = *pgn_data.nozzle_spacing.read().unwrap();
+                pressure_control.litres_per_ha = *pgn_data.litres_per_ha.read().unwrap();
+                pressure_control.min_pressure = *pgn_data.sprayer_min_pressure.read().unwrap();
+                pressure_control.max_pressure = *pgn_data.sprayer_max_pressure.read().unwrap();
+                pressure_control.nominal_pressure = *pgn_data.sprayer_nominal_pressure.read().unwrap();
+                pressure_control.active = *pgn_data.sprayer_activated.read().unwrap();
+                pressure_control.constant_pressure = *pgn_data.sprayer_constant_pressure.read().unwrap();
+
                 pressure_control.update_control();
             },
             None => ()
@@ -162,7 +173,7 @@ fn main() {
         match section_control {
             Some(ref mut sc) => {
                 let rc_lock = sc.rc.lock().unwrap();
-                work_switch = rc_lock.work_switch.is_low();
+                work_switch = rc_lock.work_switch_gpio.is_low();
                 send_autosteer_state = true;
             },
             None => ()
@@ -174,7 +185,18 @@ fn main() {
                 switch_state &= 0b1111_1110;
             }
             writer.from_autosteer(wheel_angle, heading, roll, switch_state, pwm_value);
-            timer = Instant::now();
+            match pressure_control {
+                Some(ref mut pressure_control) => {
+                    writer.sprayer_status(
+                        pressure_control.target_pressure, 
+                        pressure_control.current_pressure, 
+                        pressure_control.boom_gpio.is_low(), 
+                        pressure_control.speed
+                    );
+                },
+                None => ()
+            }
+                timer = Instant::now();
         }
 
         thread::sleep(Duration::from_millis(2));

@@ -21,7 +21,7 @@ impl MotorControl {
         let gpio = Gpio::new().unwrap();
         let _settings = settings.lock().unwrap();
         let switch = gpio.get(_settings.autosteer_switch_gpio).unwrap().into_input_pullup();
-        let pwm = PwmControl::new(_settings.pwm_direction);
+        let pwm = PwmControl::new(_settings.pwm_direction_gpio);
         drop(_settings);
         
         MotorControl {

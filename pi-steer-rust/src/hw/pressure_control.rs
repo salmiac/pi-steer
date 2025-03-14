@@ -1,4 +1,4 @@
-use rppal::gpio::{Gpio, OutputPin};
+use rppal::gpio::{Gpio, InputPin, OutputPin};
 use std::time::{Duration, Instant};
 
 const NOZZLE_CONSTANT: f32 = 2.3095; // Reverse engineered constant.
@@ -11,25 +11,27 @@ pub struct PressureControl {
     pub enabled: bool,
     pub active: bool,
     pub nominal_pressure: f32,
-    target_pressure: f32,
+    pub target_pressure: f32,
     pub current_pressure: f32,
     pub constant_pressure: bool,
     up_gpio: OutputPin,
     down_gpio: OutputPin,
     pub nozzle_size: f32,
     pub nozzle_spacing: f32, // m
-    pub litres_ha: f32,
+    pub litres_per_ha: f32,
     pub min_pressure: f32, // bar
     pub max_pressure: f32, // bar
     on_timer: Instant,
     off_timer: Instant,
     control_on: bool,
     pub speed: f32,
+    pub boom_gpio: InputPin
 }
 
 impl PressureControl {
-    pub fn new(enabled: bool, up_gpio_pin: u8, down_gpio_pin: u8) -> Self {
+    pub fn new(enabled: bool, up_gpio_pin: u8, down_gpio_pin: u8, boom_gpio_pin: u8) -> Self {
         let gpio = Gpio::new().unwrap();
+        let boom_gpio = gpio.get(boom_gpio_pin).expect("Failed to access GPIO pin").into_input_pullup();
         let mut up_gpio = gpio.get(up_gpio_pin).unwrap().into_output();
         let mut down_gpio = gpio.get(down_gpio_pin).unwrap().into_output();
         up_gpio.set_high();
@@ -45,13 +47,14 @@ impl PressureControl {
             down_gpio: down_gpio,
             nozzle_size: 0.3,
             nozzle_spacing: 0.5,
-            litres_ha: 0.0,
+            litres_per_ha: 0.0,
             min_pressure: 1.0,
             max_pressure: 8.0,
             on_timer: Instant::now(),
             off_timer: Instant::now(),
             control_on: false,
             speed: 0.0,
+            boom_gpio
         }
     }
 
@@ -123,7 +126,7 @@ impl PressureControl {
         {
             // let litres_min = speed * self.litres_ha * self.nozzle_spacing / 600.0;
             // let pressure = (litres_min / (NOZZLE_CONSTANT * self.nozzle_size)).powi(2);
-            self.target_pressure = ( (speed * self.litres_ha * self.nozzle_spacing) / (NOZZLE_CONSTANT * self.nozzle_size * 600.0)).powi(2);
+            self.target_pressure = ( (speed * self.litres_per_ha * self.nozzle_spacing) / (NOZZLE_CONSTANT * self.nozzle_size * 600.0)).powi(2);
             // self.update_control(self.target_pressure);
         }
         self.speed = speed;
@@ -137,7 +140,7 @@ mod tests {
 
     #[test]
     fn motortest() {
-        let _pressure_control = PressureControl::new(true,  7, 8);
+        let _pressure_control = PressureControl::new(true,  20, 1, 8);
     }
 }
 

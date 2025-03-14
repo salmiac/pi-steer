@@ -20,6 +20,9 @@ const STEER_CONFIG: u8 = 0xfb;
 const STEERSETTINGS: u8 = 0xfc;
 const FROM_AUTOSTEER: u8 = 0xfd;
 const AUTOSTEER_DATA: u8 = 0xfe;
+const SPRAYER_SETTINGS: u8 = 0x70;
+const SPRAYER_BUTTONS: u8 = 0x71;
+
 
 pub struct Writer {
     client: UdpSocket,
@@ -71,6 +74,35 @@ impl Writer {
                 println!("Send error: {:?}", e);
             },
         }
+    }
+
+    pub fn sprayer_status(&self, target_pressure: f32, current_pressure: f32, boom_locked: bool, speed: f32) {
+        let mut data = vec![0x80, 0x81, 0x70, 0x70, 0x07];
+
+        let target_pressure_int = (target_pressure * 100.0) as u16;
+        let current_pressure_int = (current_pressure * 100.0) as u16;
+        let speed_int = (speed * 100.0) as u16;
+        let boom_locked_byte: u8 = boom_locked as u8;
+
+        let mut buf = [0; 2];
+        LittleEndian::write_u16(&mut buf, target_pressure_int);
+        data.extend_from_slice(&buf);
+        LittleEndian::write_u16(&mut buf, current_pressure_int);
+        data.extend_from_slice(&buf);
+        LittleEndian::write_u16(&mut buf, speed_int);
+        data.extend_from_slice(&buf);
+        data.push(boom_locked_byte);
+
+        let crc: u8 = data.iter().skip(2).fold(0, |acc, &x| acc.wrapping_add(x));
+        data.push(crc);
+
+        match self.client.send_to(&data, "255.255.255.255:1111") {
+            Ok(_) => (),
+            Err(e) => if self.debug {
+                println!("Send error: {:?}", e);
+            },
+        }
+
     }
 
     pub fn gps(&self, _time: &str, lat: f64, ns: &str, lon: f64, ew: &str, fix: u8, sat: u16, hdop: f32, alt: f32, _geoid: &str, age: f32, heading: f32, speed: f32) {
@@ -137,6 +169,14 @@ pub struct PgnData {
     pub steer_angle: RwLock<f32>,
     pub status: RwLock<bool>,
     pub speed: RwLock<f32>,
+    pub nozzle_size: RwLock<f32>,
+    pub nozzle_spacing: RwLock<f32>,
+    pub litres_per_ha: RwLock<f32>,
+    pub sprayer_min_pressure: RwLock<f32>,
+    pub sprayer_max_pressure: RwLock<f32>,
+    pub sprayer_nominal_pressure: RwLock<f32>,
+    pub sprayer_activated: RwLock<bool>,
+    pub sprayer_constant_pressure: RwLock<bool>,
 }
 
 impl PgnData {
@@ -159,6 +199,14 @@ impl Reader {
             steer_angle: RwLock::new(0.0 as f32),
             status: RwLock::new(false),
             speed: RwLock::new(0.0 as f32),
+            nozzle_size: RwLock::new(0.0 as f32),
+            nozzle_spacing: RwLock::new(0.0 as f32),
+            litres_per_ha: RwLock::new(0.0 as f32),
+            sprayer_min_pressure: RwLock::new(0.0 as f32),
+            sprayer_max_pressure: RwLock::new(0.0 as f32),
+            sprayer_nominal_pressure: RwLock::new(0.0 as f32),
+            sprayer_activated: RwLock::new(false),
+            sprayer_constant_pressure: RwLock::new(false),
         });
 
         let pgn_clone = Arc::clone(&pgn_data.clone());
@@ -334,6 +382,26 @@ impl Pgn {
                 let mut sections = self.pgn_data.sections.write().unwrap();
                 *sections = sc;
             },
+            SPRAYER_SETTINGS => {
+                let mut _nozzle_size = self.pgn_data.nozzle_size.write().unwrap();
+                let mut _nozzle_spacing = self.pgn_data.nozzle_size.write().unwrap();
+                let mut _litres_per_ha = self.pgn_data.nozzle_size.write().unwrap();
+                let mut _min_pressure = self.pgn_data.nozzle_size.write().unwrap();
+                let mut _max_pressure = self.pgn_data.nozzle_size.write().unwrap();
+                let mut _nominal_pressure = self.pgn_data.nozzle_size.write().unwrap();
+                *_nozzle_size = data[0] as f32 / 100.0;
+                *_nozzle_spacing = data[1] as f32 / 100.0;
+                *_litres_per_ha = LittleEndian::read_u16(&data[2..4]) as f32 / 10.00;
+                *_min_pressure = LittleEndian::read_i16(&data[4..6]) as f32 / 100.0;
+                *_max_pressure = LittleEndian::read_i16(&data[6..8]) as f32 / 100.0;
+                *_nominal_pressure = LittleEndian::read_i16(&data[8..10]) as f32 / 100.0;
+            },
+            SPRAYER_BUTTONS => {
+                let mut _activated = self.pgn_data.sprayer_activated.write().unwrap();
+                let mut _constant_pressure = self.pgn_data.sprayer_constant_pressure.write().unwrap();
+                *_activated = data[0] & 1 == 1;
+                *_constant_pressure = data[0] >> 1 & 1 == 1;
+            }
             _ => (),
         }
     }
