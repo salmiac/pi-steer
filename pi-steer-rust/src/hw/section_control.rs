@@ -164,7 +164,7 @@ impl SectionControl {
             relay_gpio: Vec<u8>, 
             input_gpio: Vec<u8>,
             work_switch: u8,
-            motor_pwm_gpio: u8
+            manual_mode_gpio: u8
         ) -> rppal::gpio::Result<SectionControl> {
         let watchdog_timer = Arc::new(Mutex::new(Instant::now()));
         println!("Relay mode {}", relay_mode);
@@ -172,16 +172,16 @@ impl SectionControl {
 
         let watchdog_clone = Arc::clone(&watchdog_timer);
         let rc_clone = Arc::clone(&rc);
-        thread::spawn(move || Self::watchdog(watchdog_clone, rc_clone, motor_pwm_gpio));
+        thread::spawn(move || Self::watchdog(watchdog_clone, rc_clone, manual_mode_gpio));
         Ok(SectionControl {
             watchdog_timer,
             rc,
         })
     }
 
-    fn watchdog(timer: Arc<Mutex<Instant>>, relays_arc: Arc<Mutex<RelayControl>>, motor_pwm_gpio: u8) {
+    fn watchdog(timer: Arc<Mutex<Instant>>, relays_arc: Arc<Mutex<RelayControl>>, manual_mode_gpio: u8) {
         let gpio = Gpio::new().expect("Failed to initialize GPIO");
-        let manual = gpio.get(motor_pwm_gpio).expect("Failed to access GPIO pin").into_input_pullup();
+        let manual = gpio.get(manual_mode_gpio).expect("Failed to access GPIO pin").into_input_pullup();
         loop {
             let watchdog_timer = timer.lock().unwrap();
             let timeout = watchdog_timer.elapsed().as_millis() > WATCHDOG_TIMOUT;

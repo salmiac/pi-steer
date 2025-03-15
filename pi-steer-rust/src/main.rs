@@ -96,7 +96,7 @@ fn main() {
             settings.relay_gpio.clone(), 
             settings.input_gpio.clone(), 
             settings.work_switch_gpio,
-            settings.motor_pwm_gpio
+            settings.manual_mode_gpio
         ).unwrap());
     }
     drop(settings);
@@ -135,12 +135,13 @@ fn main() {
             None => (),
         }
         let mut switch_state: u8 = 0b1111_1111;
-        let pwm_value = 0.0;
+        let mut pwm_value = 0.0;
 
         match motor_control {
             Some(ref mut motor_control) => {
                 motor_control.set_control(*pgn_data.steer_angle.read().unwrap(), *pgn_data.status.read().unwrap());
-                let (direction, pwm_value) = motor_control.update_motor(wheel_angle);
+                let (direction, _pwm_value) = motor_control.update_motor(wheel_angle);
+                pwm_value = _pwm_value;
                 if motor_control.switch.is_low() { 
                     switch_state = 0b1111_1101 
                 };
@@ -154,14 +155,19 @@ fn main() {
             Some(ref mut pressure_control) => {
                 pressure_control.current_pressure = pressure_sensor.read();
                 pressure_control.set_speed(*pgn_data.speed.read().unwrap());
-                pressure_control.nozzle_size = *pgn_data.nozzle_size.read().unwrap();
-                pressure_control.nozzle_spacing = *pgn_data.nozzle_spacing.read().unwrap();
-                pressure_control.litres_per_ha = *pgn_data.litres_per_ha.read().unwrap();
-                pressure_control.min_pressure = *pgn_data.sprayer_min_pressure.read().unwrap();
-                pressure_control.max_pressure = *pgn_data.sprayer_max_pressure.read().unwrap();
-                pressure_control.nominal_pressure = *pgn_data.sprayer_nominal_pressure.read().unwrap();
-                pressure_control.active = *pgn_data.sprayer_activated.read().unwrap();
-                pressure_control.constant_pressure = *pgn_data.sprayer_constant_pressure.read().unwrap();
+                if *pgn_data.new_sprayer_data.read().unwrap() {
+                    pressure_control.nozzle_size = *pgn_data.nozzle_size.read().unwrap();
+                    pressure_control.nozzle_spacing = *pgn_data.nozzle_spacing.read().unwrap();
+                    pressure_control.litres_per_ha = *pgn_data.litres_per_ha.read().unwrap();
+                    pressure_control.min_pressure = *pgn_data.sprayer_min_pressure.read().unwrap();
+                    pressure_control.max_pressure = *pgn_data.sprayer_max_pressure.read().unwrap();
+                    pressure_control.nominal_pressure = *pgn_data.sprayer_nominal_pressure.read().unwrap();
+                    pressure_control.active = *pgn_data.sprayer_activated.read().unwrap();
+                    pressure_control.constant_pressure = *pgn_data.sprayer_constant_pressure.read().unwrap();
+
+                    let mut new_sprayer_data = (*pgn_data).new_sprayer_data.write().unwrap();
+                    *new_sprayer_data = false;
+                }
 
                 pressure_control.update_control();
             },
@@ -172,6 +178,11 @@ fn main() {
 
         match section_control {
             Some(ref mut sc) => {
+                if *pgn_data.new_section_data.read().unwrap() {
+                    sc.update(*pgn_data.sections.read().unwrap());
+                    let mut new_section_data = (*pgn_data).new_section_data.write().unwrap();
+                    *new_section_data = false;
+                }
                 let rc_lock = sc.rc.lock().unwrap();
                 work_switch = rc_lock.work_switch_gpio.is_low();
                 send_autosteer_state = true;
@@ -180,7 +191,7 @@ fn main() {
         }
 
         // Send frequency is 20 Hz        
-        if send_autosteer_state && timer.elapsed() < send_period {
+        if send_autosteer_state && timer.elapsed() >= send_period {
             if work_switch {
                 switch_state &= 0b1111_1110;
             }

@@ -165,10 +165,12 @@ impl Writer {
 }
 
 pub struct PgnData {
+    pub new_section_data: RwLock<bool>,
     pub sections: RwLock<u16>,
     pub steer_angle: RwLock<f32>,
     pub status: RwLock<bool>,
     pub speed: RwLock<f32>,
+    pub new_sprayer_data: RwLock<bool>,
     pub nozzle_size: RwLock<f32>,
     pub nozzle_spacing: RwLock<f32>,
     pub litres_per_ha: RwLock<f32>,
@@ -195,10 +197,12 @@ pub struct Reader {
 impl Reader {
     pub fn new(settings: Arc<Mutex<Settings>>, debug: bool) -> Arc<PgnData> {
         let pgn_data = Arc::new(PgnData {
+            new_section_data: RwLock::new(false),
             sections: RwLock::new(0 as u16),
             steer_angle: RwLock::new(0.0 as f32),
             status: RwLock::new(false),
             speed: RwLock::new(0.0 as f32),
+            new_sprayer_data: RwLock::new(false),
             nozzle_size: RwLock::new(0.0 as f32),
             nozzle_spacing: RwLock::new(0.0 as f32),
             litres_per_ha: RwLock::new(0.0 as f32),
@@ -381,6 +385,9 @@ impl Pgn {
                 *_speed = speed;
                 let mut sections = self.pgn_data.sections.write().unwrap();
                 *sections = sc;
+                let mut new_section_data = self.pgn_data.new_section_data.write().unwrap();
+                *new_section_data = true;
+
             },
             SPRAYER_SETTINGS => {
                 let mut _nozzle_size = self.pgn_data.nozzle_size.write().unwrap();
@@ -395,12 +402,16 @@ impl Pgn {
                 *_min_pressure = LittleEndian::read_i16(&data[4..6]) as f32 / 100.0;
                 *_max_pressure = LittleEndian::read_i16(&data[6..8]) as f32 / 100.0;
                 *_nominal_pressure = LittleEndian::read_i16(&data[8..10]) as f32 / 100.0;
+                let mut _new_sprayer_data = self.pgn_data.new_sprayer_data.write().unwrap();
+                *_new_sprayer_data = true;
             },
             SPRAYER_BUTTONS => {
                 let mut _activated = self.pgn_data.sprayer_activated.write().unwrap();
                 let mut _constant_pressure = self.pgn_data.sprayer_constant_pressure.write().unwrap();
                 *_activated = data[0] & 1 == 1;
                 *_constant_pressure = data[0] >> 1 & 1 == 1;
+                let mut _new_sprayer_data = self.pgn_data.new_sprayer_data.write().unwrap();
+                *_new_sprayer_data = true;
             }
             _ => (),
         }
