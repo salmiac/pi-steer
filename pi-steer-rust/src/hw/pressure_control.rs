@@ -65,7 +65,7 @@ impl PressureControl {
             return
         }
 
-        if self.enabled {
+        if self.enabled && self.active {
             if relative_pressure_difference > PRESSURE_DIFFERENCE_FULL_CONTROL {
                 self.set_control();
                 self.reset_timers();
@@ -86,6 +86,9 @@ impl PressureControl {
                 }
     
             }
+        }
+        else {
+            self.off();
         }
     }
 
