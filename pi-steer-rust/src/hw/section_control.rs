@@ -67,7 +67,7 @@ impl RelayControl {
         }
     }
 
-    fn get_sections(&mut self, manual: bool) -> u16 {
+    fn get_sections(&mut self, manual: bool) -> (u16, bool) {
         let work_switch = self.work_switch_gpio.is_low();
         let mut sc = self.sections;
         let manual_sc = get_input(&self.input_gpio);
@@ -80,11 +80,11 @@ impl RelayControl {
         if manual {
             sc = manual_sc;
         }
-        sc
+        (sc, work_switch)
     }
 
     pub fn impulse(&mut self, manual: bool) {
-        let sc = self.get_sections(manual);
+        let (sc, work_switch) = self.get_sections(manual);
         
         for n in 0..self.relay_gpio.len()/2 {
             let status = section_status(sc, n);
@@ -101,7 +101,7 @@ impl RelayControl {
                 continue;
             }
 
-            if self.impulse_time[n].elapsed() > Duration::from_millis((self.impulse_seconds*1000.0) as u64) {
+            if (!work_switch && !manual) || self.impulse_time[n].elapsed() > Duration::from_millis((self.impulse_seconds*1000.0) as u64) {
                 self.relay_gpio[n*2].set_low();
                 self.relay_gpio[n*2+1].set_low();
             }
@@ -110,7 +110,7 @@ impl RelayControl {
     }
 
     pub fn relays_on_off(&mut self, manual: bool) {
-        let sc = self.get_sections(manual);
+        let (sc, _) = self.get_sections(manual);
         for n in 0..16 {
             if section_status(sc, n) {
                 self.relay_gpio[n].set_low();
@@ -121,7 +121,7 @@ impl RelayControl {
     }
 
     pub fn relays_reverse(&mut self,  manual: bool) {
-        let sc = self.get_sections(manual);
+        let (sc, _) = self.get_sections(manual);
         for n in 0..self.relay_gpio.len()/2 {
             if section_status(sc, n) {
                 self.relay_gpio[n*2].set_low();
