@@ -28,16 +28,16 @@ impl PwmControl {
 mod tests {
     use super::*;
     use std::thread;
-    use std::time::{Duration};
+    use std::time::Duration;
 
     #[test]
     fn pwm() {
         let mut pwm_control = PwmControl::new(16);
-        for n in 1..255{
+        for n in 0u8..255{
             thread::sleep(Duration::from_millis(50));
             pwm_control.set(true, f64::from(n));
         }
-        for n in 1..255{
+        for n in 0u8..255{
             thread::sleep(Duration::from_millis(50));
             pwm_control.set(false, f64::from(n));
         }

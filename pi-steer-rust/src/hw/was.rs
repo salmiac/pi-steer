@@ -7,7 +7,7 @@ use crate::hw::ads1115::ADS1115;
 use crate::config::settings::Settings;
 
 
-const MAXANGLE: f64 = 85.0;
+const MAXANGLE: f32 = 85.0;
 
 pub struct WAS {
     settings: Arc<Mutex<Settings>>,
@@ -20,10 +20,10 @@ impl WAS {
         Ok(WAS { settings, device })
     }
 
-    pub fn read(&mut self) -> f64 {
-        let adc = self.device.read().unwrap_or(0);
+    pub fn read(&mut self) -> f32 {
+        let adc = self.device.read(0).unwrap_or(0.0);
         let settings = self.settings.lock().unwrap();
-        let mut angle = (adc as f64 / 16383.5 - 1.0) * 5.0 / 4.0 * 60.0 * settings.counts_per_deg as f64 / 100.0 + settings.steer_offset;
+        let mut angle = (adc - 2.5) / 4.0 * 60.0 * settings.counts_per_deg as f32 / 100.0 + settings.steer_offset;
         if settings.invert_was {
             angle = -angle;
         }

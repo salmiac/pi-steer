@@ -6,13 +6,26 @@ from machine import Pin
 from time import sleep
 import network
 from machine import UART
-
 import socket
+import json
 
-_SSID = const('agio3')
-_WIFI_PASS = const('automaattiohjaus')
+def read_config():
+    with open('config.json', 'r') as f:
+        config = json.load(f)
+    return config['SSID'], config['WIFI_PASS']
+
+_SSID, _WIFI_PASS = read_config()
 _IP = const('255.255.255.255')
 _PORT = const(9999)
+
+status = {
+    network.STAT_IDLE: 'no connection and no activity',
+    network.STAT_CONNECTING: 'connecting',
+    network.STAT_WRONG_PASSWORD: 'connection failed due to incorrect password',
+    network.STAT_NO_AP_FOUND: 'connection failed because no access point replied',
+    network.STAT_CONNECT_FAIL: 'connection failed for the reason not in the other categories',
+    network.STAT_GOT_IP: 'successfully connected and got an IP address',
+}
 
 def read_imu(uart):
     while True:
@@ -70,6 +83,26 @@ def send_udp(data):
     s.close()
     print(''.join(['{:02x}:'.format(byte) for byte in data]))
 
+def connect_to_network(ssid, password):
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    # wlan.hostname("imu-pico-w")
+    # wlan.config(reconnects=5)
+    while True:
+        wlan.connect(ssid, password)
+
+        # Wait for connection
+        while not wlan.isconnected():
+            sleep(1)
+            
+            print("Connecting to network... ", ssid, status[wlan.status()])
+            if wlan.status() == network.NO_AP_FOUND or wlan.status() == network.CONNECT_FAIL:
+                print("Connect failed, retrying...")
+                break
+
+        print('Network config:', wlan.ifconfig())
+        return wlan
+
 uart0 = UART(0, baudrate=115200)
 
 base_roll = 0
@@ -83,25 +116,20 @@ elif 45 < roll < 135:
 elif roll > 135 or roll < -135:
     base_roll = 180
 
-
-# Initialize Wi-Fi in station mode
-wlan = network.WLAN(network.STA_IF)
-wlan.active(True)
-wlan.connect(_SSID, _WIFI_PASS)
-
-# Wait for connection
-while not wlan.isconnected():
-    pass
-
-print('Network config:', wlan.ifconfig())
-
-
-pin = Pin("LED", Pin.OUT)
-
 while True:
-    pin.toggle()
+    try:
+        wlan = connect_to_network(_SSID, _WIFI_PASS)
+        pin = Pin("LED", Pin.OUT)
 
-    (heading, roll, pitch) = read_imu(uart0)
-    roll -= base_roll
-    send_imu_data(heading, roll, 0) # TODO angular velocity
-    print(heading, roll, pitch)
+        while True:
+            pin.toggle()
+            (heading, roll, pitch) = read_imu(uart0)
+            roll -= base_roll
+            send_imu_data(heading, roll, 0) # TODO angular velocity
+            print(heading, roll, pitch)
+            # sleep(1)  # Add a delay to avoid busy-waiting
+
+    except Exception as e:
+        print("Network error:", e)
+        print("Reconnecting to network...")
+        sleep(5)  # Wait before attempting to reconnect

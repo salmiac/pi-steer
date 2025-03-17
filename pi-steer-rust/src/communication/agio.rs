@@ -2,10 +2,8 @@ use std::net::UdpSocket;
 use std::thread;
 use std::time::Duration;
 use byteorder::{ByteOrder, LittleEndian};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 
-use crate::hw::motor::MotorControl;
-use crate::hw::section_control::SectionControl;
 use crate::config::settings::Settings;
 
 const HELLO: u8 = 0xc7;
@@ -22,6 +20,9 @@ const STEER_CONFIG: u8 = 0xfb;
 const STEERSETTINGS: u8 = 0xfc;
 const FROM_AUTOSTEER: u8 = 0xfd;
 const AUTOSTEER_DATA: u8 = 0xfe;
+const SPRAYER_SETTINGS: u8 = 0x70;
+const SPRAYER_BUTTONS: u8 = 0x71;
+
 
 pub struct Writer {
     client: UdpSocket,
@@ -41,7 +42,7 @@ impl Writer {
         }
     }
 
-    pub fn from_autosteer(&self, wheel_angle: f64, heading: f32, roll: f32, switch: u8, pwm_value: f64) {
+    pub fn from_autosteer(&self, wheel_angle: f32, heading: f32, roll: f32, switch: u8, pwm_value: f64) {
         let mut data = vec![0x80, 0x81, 0x7e, 0xfd, 0x08];
         
         let pwm_display = (pwm_value * 2.55) as u8;
@@ -73,6 +74,35 @@ impl Writer {
                 println!("Send error: {:?}", e);
             },
         }
+    }
+
+    pub fn sprayer_status(&self, target_pressure: f32, current_pressure: f32, boom_locked: bool, speed: f32) {
+        let mut data = vec![0x80, 0x81, 0x70, 0x70, 0x07];
+
+        let target_pressure_int = (target_pressure * 100.0) as u16;
+        let current_pressure_int = (current_pressure * 100.0) as u16;
+        let speed_int = (speed * 100.0) as u16;
+        let boom_locked_byte: u8 = boom_locked as u8;
+
+        let mut buf = [0; 2];
+        LittleEndian::write_u16(&mut buf, target_pressure_int);
+        data.extend_from_slice(&buf);
+        LittleEndian::write_u16(&mut buf, current_pressure_int);
+        data.extend_from_slice(&buf);
+        LittleEndian::write_u16(&mut buf, speed_int);
+        data.extend_from_slice(&buf);
+        data.push(boom_locked_byte);
+
+        let crc: u8 = data.iter().skip(2).fold(0, |acc, &x| acc.wrapping_add(x));
+        data.push(crc);
+
+        match self.client.send_to(&data, "255.255.255.255:1111") {
+            Ok(_) => (),
+            Err(e) => if self.debug {
+                println!("Send error: {:?}", e);
+            },
+        }
+
     }
 
     pub fn gps(&self, _time: &str, lat: f64, ns: &str, lon: f64, ew: &str, fix: u8, sat: u16, hdop: f32, alt: f32, _geoid: &str, age: f32, heading: f32, speed: f32) {
@@ -134,44 +164,78 @@ impl Writer {
     
 }
 
-pub struct Reader {
-    motor: Arc<Mutex<MotorControl>>,
+pub struct PgnData {
+    pub new_section_data: RwLock<bool>,
+    pub sections: RwLock<u16>,
+    pub steer_angle: RwLock<f32>,
+    pub status: RwLock<bool>,
+    pub speed: RwLock<f32>,
+    pub new_sprayer_data: RwLock<bool>,
+    pub nozzle_size: RwLock<f32>,
+    pub nozzle_spacing: RwLock<f32>,
+    pub litres_per_ha: RwLock<f32>,
+    pub sprayer_min_pressure: RwLock<f32>,
+    pub sprayer_max_pressure: RwLock<f32>,
+    pub sprayer_nominal_pressure: RwLock<f32>,
+    pub sprayer_activated: RwLock<bool>,
+    pub sprayer_constant_pressure: RwLock<bool>,
+}
+
+impl PgnData {
+    pub fn get_sections(&self) -> u16 {
+        *self.sections.read().unwrap()
+    }
+}
+pub struct Pgn {
     settings: Arc<Mutex<Settings>>,
-    pub sc: SectionControl,
+    pgn_data: Arc<PgnData>,
     debug: bool,
+}
+pub struct Reader {
 }
 
 impl Reader {
-    pub fn new(settings: Arc<Mutex<Settings>>, motor: Arc<Mutex<MotorControl>>, debug: bool) -> Reader {
-        let set_lock = settings.lock().unwrap();
-        println!("Relay mode reader {}", set_lock.relay_mode);
-        let sc = SectionControl::new(set_lock.relay_mode, set_lock.impulse_seconds, set_lock.impulse_gpio.clone(), set_lock.relay_gpio.clone(), set_lock.input_gpio.clone(), set_lock.work_switch ).unwrap();
-        drop(set_lock);
-        Reader { 
-            motor, 
-            settings: Arc::clone(&settings), 
-            sc,
-            debug 
-        }
+    pub fn new(settings: Arc<Mutex<Settings>>, debug: bool) -> Arc<PgnData> {
+        let pgn_data = Arc::new(PgnData {
+            new_section_data: RwLock::new(false),
+            sections: RwLock::new(0 as u16),
+            steer_angle: RwLock::new(0.0 as f32),
+            status: RwLock::new(false),
+            speed: RwLock::new(0.0 as f32),
+            new_sprayer_data: RwLock::new(false),
+            nozzle_size: RwLock::new(0.0 as f32),
+            nozzle_spacing: RwLock::new(0.0 as f32),
+            litres_per_ha: RwLock::new(0.0 as f32),
+            sprayer_min_pressure: RwLock::new(0.0 as f32),
+            sprayer_max_pressure: RwLock::new(0.0 as f32),
+            sprayer_nominal_pressure: RwLock::new(0.0 as f32),
+            sprayer_activated: RwLock::new(false),
+            sprayer_constant_pressure: RwLock::new(false),
+        });
+
+        let pgn_clone = Arc::clone(&pgn_data.clone());
+
+        // Reader thread to listen for incoming messages
+        thread::spawn(move || Self::reader_thread(settings, pgn_clone, debug));
+        pgn_data
     }
 
-    pub fn start(self) {
+    pub fn reader_thread( settings: Arc<Mutex<Settings>>, pgn_data: Arc<PgnData>, debug: bool ) {
+        let mut pgn = Pgn { 
+            settings, 
+            pgn_data,
+            debug 
+        };
+
         let server = UdpSocket::bind("0.0.0.0:8888").unwrap();
         server.set_broadcast(true).unwrap();
         server.set_nonblocking(true).unwrap();
-
-        // let agio_arc = Arc::new(Mutex::new(self));
-        // let agio_clone = Arc::clone(&agio_arc);
-    
-        // Reader thread to listen for incoming messages
-        let _reader_thread = thread::spawn(move || loop {
-            let mut buf = [0u8; 1024];
+        let mut buf = [0u8; 1024];
+        loop {
             match server.recv_from(&mut buf) {
                 Ok((size, _addr)) => {
                     if size >= 6 {
-                        // let mut _agio = agio_clone.lock().unwrap();
-                        // _agio.decode_data(&buf[..size]);
-                        self.decode_data(&buf[..size]);
+                        pgn.decode_data(&buf[..size]);
                     }
                 },
                 Err(e) if e.kind() != std::io::ErrorKind::WouldBlock => {
@@ -180,7 +244,33 @@ impl Reader {
                 },
                 _ => {thread::sleep(Duration::from_millis(5));}
             }
-        });
+        }
+    }
+}
+
+impl Pgn {
+
+    pub fn new(settings: Arc<Mutex<Settings>>, pgn_data: Arc<PgnData>, debug: bool) -> Pgn {
+        Pgn { 
+            settings: settings, 
+            pgn_data,
+            debug 
+        }
+    }
+
+    pub fn get_speed(self) -> f32 {
+        let speed = self.pgn_data.speed.read().unwrap();
+        *speed
+    }
+
+    pub fn get_status(self) -> bool {
+        let status = self.pgn_data.status.read().unwrap();
+        *status
+    }
+
+    pub fn get_steer_angle(self) -> f32 {
+        let steer_angle = self.pgn_data.steer_angle.read().unwrap();
+        *steer_angle
     }
 
     fn decode_data(&mut self, data: &[u8]) -> Option<()> {
@@ -227,7 +317,7 @@ impl Reader {
             RELAY_CONFIG => {},
             MACHINE_DATA => {
                 // let uturn = data[0];
-                // let speed = data[1] as f64 / 10.0;
+                // let speed = data[1] as f32 / 10.0;
                 // let hyd_lift = data[2];
                 // let tram = data[3];
                 // let geo_stop = data[4];
@@ -236,7 +326,8 @@ impl Reader {
                 if self.debug {
                     println!("machine data");
                 }
-                self.sc.update(sc);
+                let mut sections = self.pgn_data.sections.write().unwrap();
+                *sections = sc;
             },
             STEER_CONFIG => {
                 let mut settings = self.settings.lock().unwrap();
@@ -267,7 +358,7 @@ impl Reader {
                 settings.low_pwm = data[2];
                 settings.min_pwm = data[3];
                 settings.counts_per_deg = data[4];
-                settings.steer_offset = LittleEndian::read_i16(&data[5..7]) as f64 / 100.0;
+                settings.steer_offset = LittleEndian::read_i16(&data[5..7]) as f32 / 100.0;
                 settings.ackerman_fix = data[7];
 
                 if self.debug {
@@ -277,20 +368,51 @@ impl Reader {
             },
             FROM_AUTOSTEER => {},
             AUTOSTEER_DATA => {
-                // let speed = LittleEndian::read_u16(&data[0..2]) as f64 / 10.0;
+                let speed = LittleEndian::read_u16(&data[0..2]) as f32 / 10.0;
                 let status = data[2];
-                let steer_angle = LittleEndian::read_i16(&data[3..5]) as f64 / 100.0;
+                let steer_angle = LittleEndian::read_i16(&data[3..5]) as f32 / 100.0;
                 let sc = LittleEndian::read_u16(&data[6..8]);
 
                 if self.debug {
                     println!("autosteer data");
                     println!("SC: {:#018b}, steer angle: {}", sc, steer_angle);
                 }
-                let mut motor = self.motor.lock().unwrap();
-                motor.set_control(steer_angle, status != 0);
-                drop(motor);
-                self.sc.update(sc);
+                let mut _steer_angle = self.pgn_data.steer_angle.write().unwrap();
+                *_steer_angle = steer_angle;
+                let mut _status = self.pgn_data.status.write().unwrap();
+                *_status = status != 0;
+                let mut _speed = self.pgn_data.speed.write().unwrap();
+                *_speed = speed;
+                let mut sections = self.pgn_data.sections.write().unwrap();
+                *sections = sc;
+                let mut new_section_data = self.pgn_data.new_section_data.write().unwrap();
+                *new_section_data = true;
+
             },
+            SPRAYER_SETTINGS => {
+                let mut _nozzle_size = self.pgn_data.nozzle_size.write().unwrap();
+                let mut _nozzle_spacing = self.pgn_data.nozzle_size.write().unwrap();
+                let mut _litres_per_ha = self.pgn_data.nozzle_size.write().unwrap();
+                let mut _min_pressure = self.pgn_data.nozzle_size.write().unwrap();
+                let mut _max_pressure = self.pgn_data.nozzle_size.write().unwrap();
+                let mut _nominal_pressure = self.pgn_data.nozzle_size.write().unwrap();
+                *_nozzle_size = data[0] as f32 / 100.0;
+                *_nozzle_spacing = data[1] as f32 / 100.0;
+                *_litres_per_ha = LittleEndian::read_u16(&data[2..4]) as f32 / 10.00;
+                *_min_pressure = LittleEndian::read_i16(&data[4..6]) as f32 / 100.0;
+                *_max_pressure = LittleEndian::read_i16(&data[6..8]) as f32 / 100.0;
+                *_nominal_pressure = LittleEndian::read_i16(&data[8..10]) as f32 / 100.0;
+                let mut _new_sprayer_data = self.pgn_data.new_sprayer_data.write().unwrap();
+                *_new_sprayer_data = true;
+            },
+            SPRAYER_BUTTONS => {
+                let mut _activated = self.pgn_data.sprayer_activated.write().unwrap();
+                let mut _constant_pressure = self.pgn_data.sprayer_constant_pressure.write().unwrap();
+                *_activated = data[0] & 1 == 1;
+                *_constant_pressure = data[0] >> 1 & 1 == 1;
+                let mut _new_sprayer_data = self.pgn_data.new_sprayer_data.write().unwrap();
+                *_new_sprayer_data = true;
+            }
             _ => (),
         }
     }
