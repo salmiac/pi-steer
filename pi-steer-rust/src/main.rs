@@ -92,7 +92,6 @@ fn main() {
         section_control = Some(SectionControl::new(
             settings.relay_mode, 
             settings.impulse_seconds, 
-            settings.impulse_gpio.clone(), 
             settings.relay_gpio.clone(), 
             settings.input_gpio.clone(), 
             settings.work_switch_gpio,

@@ -10,43 +10,36 @@ Pictures and something [here](Documents/README.md).
 ## Raspberry Pi 3
 Why Raspberry Pi? It's just somethin I had laying around.
 
-### Install
-
-From fresh Raspberry PI OS.
-```
-sudo apt-get update
-sudo apt-get upgrade
-sudo apt-get install pip
-pip install smbus2
-pip install pyserial
-```
+### install
 
 Configure raspberry:
-```
+```bash
 sudo raspi-config
 ```
 From System Options set Wireless LAN, from Interface Options enable I2C, disable login console on serial port, enable serial port hardware.
 
-Edit `/boot/config.txt`
+Edit `/boot/firmware/config.txt`
+```bash
+sudo nano /boot/firmware/config.txt
 ```
-sudo nano /boot/config.txt
-```
-Add the line `dtoverlay=pwm-2chan,pin=12,func=4,pin2=13,func2=4`
+Add the line `dtoverlay=pwm,pin=12,func=4`
 Save the file and reboot.
 
-## Run program 
-Run program by:
-
-`python pi-steer/autosteer.py`
-
-To start automatically at boot enter `crontab -e` and add following line.
+```bash
+wget https://github.com/salmiac/pi-steer/releases/download/v0.1.1/pi-steer-rust
+chmod +x pi-steer-rust-raspberry-pi-3
 ```
-@reboot python /home/pi/pi-steer/autosteer.py & > /dev/null 2>&1
+Run it once and default settings file (`settings.json`) is created.
+Edit file.
+```bash
+nano settings.json
 ```
 
-sudo crontab -e
-@reboot /bin/sleep 5; /usr/bin/python /home/pi/pi-steer/autosteer.py &
+To build binaries Yourself [look here](pi-steer-rust/README.md)
 
+## Raspberry Pi Pico W
+
+Is used as standalone IMU. [README.md](imu-pico-w/README.md)
 
 ## Raspberry Pi pinout
 |Device|pin|Pi GPIO|Pi pin|Pi pin|Pi GPIO|pin|Device|
@@ -111,6 +104,7 @@ The problem with BNO085 is that I2C communication is more complicated to write a
 #### BNO055 
 
 BNO055 is connected by I2C.
+You shoud not use BNO055, the drift is just terrible. Use BNO085 instead.
 
 Wires connectedd to raspberry Pi.
 |GPIO|Pi pin number|BNO085|
@@ -171,17 +165,6 @@ A microswitch to activate autosteer is connected to Raspberry Pi:
 |Ground|30|A|
 |GPIO 27|13|B|
 
-
-## Status LEDs
-
-Leds are connected between 3.3 V power (pin 17) and control pins
-|GPIO|Pi pin number|description|
-|--|--|--|
-|GPIO 22|15|Autosteer activated|
-|GPIO 8|24|Motor direction|
-|GPIO 23|16|Program activity|
-|Ground|20|Power on|
-
 # Relays
 Pololu Basic 2-Channel SPDT Relay Carrier with 12VDC Relays
 https://www.pololu.com/product/2485
@@ -195,8 +178,6 @@ https://www.pololu.com/product/2485
 |GPIO 17|11|EN2|||
 |||NO1||Output Up|
 |||NO2||Output Down|
-
-
 
 ## Section control
 Not implemented, sorry.
