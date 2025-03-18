@@ -125,13 +125,24 @@ impl PressureControl {
 
     // km/h
     pub fn set_speed(&mut self, speed: f32) {
-        if self.enabled && self.active && !self.constant_pressure 
-        {
-            // let litres_min = speed * self.litres_ha * self.nozzle_spacing / 600.0;
-            // let pressure = (litres_min / (NOZZLE_CONSTANT * self.nozzle_size)).powi(2);
-            self.target_pressure = ( (speed * self.litres_per_ha * self.nozzle_spacing) / (NOZZLE_CONSTANT * self.nozzle_size * 600.0)).powi(2);
-            // self.update_control(self.target_pressure);
-        }
+        if self.enabled && self.active {
+            if !self.constant_pressure {
+                // let litres_min = speed * self.litres_ha * self.nozzle_spacing / 600.0;
+                // let pressure = (litres_min / (NOZZLE_CONSTANT * self.nozzle_size)).powi(2);
+                let mut pressure = ( (speed * self.litres_per_ha * self.nozzle_spacing) / (NOZZLE_CONSTANT * self.nozzle_size * 600.0)).powi(2);
+                if pressure < self.min_pressure {
+                    pressure = self.min_pressure;
+                }
+                if pressure > self.max_pressure {
+                    pressure = self.max_pressure;
+                }
+                self.target_pressure = pressure;
+                // self.update_control(self.target_pressure);
+            }
+            else {
+                self.target_pressure = self.nominal_pressure;
+            }
+        } 
         self.speed = speed;
     }
 }

@@ -398,7 +398,7 @@ impl Pgn {
                 let mut _nominal_pressure = self.pgn_data.sprayer_nominal_pressure.write().unwrap();
                 *_nozzle_size = data[0] as f32 / 100.0;
                 *_nozzle_spacing = data[1] as f32 / 100.0;
-                *_litres_per_ha = LittleEndian::read_u16(&data[2..4]) as f32 / 10.00;
+                *_litres_per_ha = LittleEndian::read_u16(&data[2..4]) as f32 / 100.0;
                 *_min_pressure = LittleEndian::read_i16(&data[4..6]) as f32 / 100.0;
                 *_max_pressure = LittleEndian::read_i16(&data[6..8]) as f32 / 100.0;
                 *_nominal_pressure = LittleEndian::read_i16(&data[8..10]) as f32 / 100.0;
