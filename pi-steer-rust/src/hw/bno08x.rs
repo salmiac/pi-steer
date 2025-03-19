@@ -44,8 +44,8 @@ impl BNO08X {
                                     if length == 17 {
                                         // index 0
                                         let heading = LittleEndian::read_i16(&buf[1..3]) as f32 / 100.0;
-                                        let roll = LittleEndian::read_i16(&buf[3..5]) as f32 / 100.0;
-                                        let pitch = LittleEndian::read_i16(&buf[5..7]) as f32 / 100.0;
+                                        let pitch = LittleEndian::read_i16(&buf[3..5]) as f32 / 100.0;
+                                        let roll = LittleEndian::read_i16(&buf[5..7]) as f32 / 100.0;
                                         // acc_x 7..9
                                         // acc_y 9..11
                                         // acc_z 11..13
