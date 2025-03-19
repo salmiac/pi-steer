@@ -26,7 +26,7 @@ Add the line `dtoverlay=pwm,pin=12,func=4`
 Save the file and reboot.
 
 ```bash
-wget https://github.com/salmiac/pi-steer/releases/download/v0.1.3/pi-steer-rust
+wget https://github.com/salmiac/pi-steer/releases/download/v0.1.4/pi-steer-rust
 chmod +x pi-steer-rust-raspberry-pi-3
 ```
 Run it once and default settings file (`settings.json`) is created.

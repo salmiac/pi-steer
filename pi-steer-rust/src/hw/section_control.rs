@@ -5,6 +5,7 @@ use std::thread;
 
 const WATCHDOG_TIMOUT: u128 = 2000;
 
+#[derive(PartialEq)]
 enum RelayMode {
     Off = 0,
     Impulse = 1,
@@ -135,7 +136,11 @@ impl RelayControl {
 
     pub fn all_off(&mut self) {
         for relay in self.relay_gpio.iter_mut() {
-            relay.set_high();
+            if self.mode == RelayMode::Impulse {
+                relay.set_low();
+            } else {
+                relay.set_high();
+            }
         }
     }
 
