@@ -13,6 +13,7 @@ use crate::hw::{
     imu::IMU, 
     was::WAS, 
     gps::GPS, 
+    ads1115::ADS1115,
     pressure_control::PressureControl, 
     pressure_sensor::PressureSensor, 
     section_control::SectionControl
@@ -53,6 +54,13 @@ fn main() {
     let settings = settings_arc.lock().unwrap();
     let is_steer_control = settings.steer_control;
     let is_imu = settings.bno085;
+
+    // Init ADC
+    let mut adc: Option<ADS1115> = None;
+    if settings.was || settings.sprayer_pressure_control {
+        debug::write("Start ADC");
+        adc = Some(ADS1115::new().unwrap());
+    }
 
     // Init WAS
     let mut was: Option<WAS> = None;
@@ -130,7 +138,7 @@ fn main() {
         
         let mut wheel_angle: f32 = 0.0;
         match was {
-            Some(ref mut w) => wheel_angle = w.read(),
+            Some(ref mut w) => wheel_angle = w.angle(adc.as_mut().unwrap().read(0).unwrap()),
             None => (),
         }
         let mut switch_state: u8 = 0b1111_1111;
@@ -167,7 +175,7 @@ fn main() {
                 }
                 pressure_control.set_speed(*pgn_data.speed.read().unwrap());
 
-                pressure_control.current_pressure = pressure_sensor.read();
+                pressure_control.current_pressure = pressure_sensor.pressure(adc.as_mut().unwrap().read(1).unwrap());
                 pressure_control.update_control();
             },
             None => ()
