@@ -76,8 +76,13 @@ impl Writer {
         }
     }
 
-    pub fn sprayer_status(&self, target_pressure: f32, current_pressure: f32, boom_locked: bool, speed: f32) {
+    pub fn sprayer_status(&self, target_pressure: f32, mut current_pressure: f32, boom_locked: bool, speed: f32) {
         let mut data = vec![0x80, 0x81, 0x70, 0x70, 0x07];
+
+        // Clamp the target pressure to a minimum of 0.0, as negative values don't make sense in this context.
+        if current_pressure < 0.0 {
+            current_pressure = 0.0;
+        }
 
         let target_pressure_int = (target_pressure * 100.0) as u16;
         let current_pressure_int = (current_pressure * 100.0) as u16;

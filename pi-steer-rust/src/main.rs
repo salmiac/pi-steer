@@ -76,7 +76,7 @@ fn main() {
 
     // Init sprayer pressure controller
     let mut pressure_control: Option<PressureControl> = None;
-    let mut pressure_sensor = PressureSensor::new(settings.pressure_sensor, settings.sprayer_pressure_multiplier, settings.sprayer_pressure_add).expect("Is ADC present?");
+    let mut pressure_sensor = PressureSensor::new(settings.sprayer_pressure_control, settings.sprayer_pressure_multiplier, settings.sprayer_pressure_add).expect("Is ADC present?");
     if settings.sprayer_pressure_control {
         pressure_control = Some(PressureControl::new(
             settings.sprayer_pressure_control, 
