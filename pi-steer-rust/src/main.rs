@@ -152,8 +152,6 @@ fn main() {
 
         match pressure_control {
             Some(ref mut pressure_control) => {
-                pressure_control.current_pressure = pressure_sensor.read();
-                pressure_control.set_speed(*pgn_data.speed.read().unwrap());
                 if *pgn_data.new_sprayer_data.read().unwrap() {
                     pressure_control.nozzle_size = *pgn_data.nozzle_size.read().unwrap();
                     pressure_control.nozzle_spacing = *pgn_data.nozzle_spacing.read().unwrap();
@@ -167,7 +165,9 @@ fn main() {
                     let mut new_sprayer_data = (*pgn_data).new_sprayer_data.write().unwrap();
                     *new_sprayer_data = false;
                 }
+                pressure_control.set_speed(*pgn_data.speed.read().unwrap());
 
+                pressure_control.current_pressure = pressure_sensor.read();
                 pressure_control.update_control();
             },
             None => ()
