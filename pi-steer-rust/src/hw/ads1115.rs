@@ -6,7 +6,7 @@ use std::time::Duration;
 const ADS111X_ADDRESS0: u16 = 0x48;
 const CONVERSION_REGISTER: u8 = 0x00;
 const CONFIG_REGISTER: u8 = 0x01;
-const CONFIG_HIGH: u8 = 0b1000_0001;
+const CONFIG_HIGH: u8 = 0b1100_0001;
 const CONFIG_LOW: u8 = 0b1110_0011;
 /* Configuration
 bit description
@@ -34,7 +34,7 @@ impl ADS1115 {
 
     pub fn read(&mut self, channel: u8) -> Result<f32, Box<dyn Error>> {
         self.i2c.write(&[CONFIG_REGISTER, ((channel & 0b000_0111) << 4) | CONFIG_HIGH, CONFIG_LOW])?;
-        thread::sleep(Duration::from_micros(1000));
+        thread::sleep(Duration::from_micros(1400));
         let mut data = [0u8; 2];
         self.i2c.write_read(&[CONVERSION_REGISTER], &mut data)?;
         Ok(i16::from_be_bytes(data) as f32 / 32767.0 * 6.144) // Return voltage

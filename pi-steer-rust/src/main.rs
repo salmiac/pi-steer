@@ -217,6 +217,6 @@ fn main() {
                 timer = Instant::now();
         }
 
-        thread::sleep(Duration::from_millis(2));
+        thread::sleep(Duration::from_millis(1));
     }
 }
