@@ -61,6 +61,7 @@ const CONFIG_MODE_SINGLE: u16 = 0b1 << 8;
 const CONFIG_DR_250SPS: u16 = 0b101 << 5;
 const CONFIG_COMP_DISABLE: u16 = 0b11;
 const FSR_VOLTAGE: f32 = 6.144;
+const ROLLING_AVERAGE_SIZE: usize = 4; // Number of samples for rolling average
 
 // ADS1115 struct no longer holds the i2c handle
 pub struct ADS1115 {
@@ -82,7 +83,6 @@ impl ADS1115 {
             )
         );
 
-        // 5. Return the ADS1115 instance, which only contains mask and data Arc
         Ok(ADS1115 {
             data: data_arc, // Store the original data Arc
         })
@@ -134,12 +134,12 @@ impl ADS1115 {
                         }
                     };
 
-                    // Update shared data (logic remains the same)
+                    // Update shared data
                     if let Ok(voltage) = read_result {
                         let mut data_guard = data_clone.write().expect("Data RwLock poisoned");
                         let channel_data = &mut data_guard[channel as usize];
                         channel_data.push(voltage);
-                        if channel_data.len() > 3 {
+                        if channel_data.len() > ROLLING_AVERAGE_SIZE {
                             channel_data.remove(0);
                         }
                     }
@@ -148,7 +148,7 @@ impl ADS1115 {
         } // End loop
     } // End thread spawn
 
-    // --- Public method to get voltage --- (Remains the same, only needs 'data')
+    // --- Public method to get voltage ---
     pub fn voltage(&self, channel: u8) -> Option<f32> {
         if channel >= 4 {
              eprintln!("Invalid channel requested: {}", channel);
@@ -166,7 +166,7 @@ impl ADS1115 {
     }
 }
 
-// --- Test Module --- (Remains the same)
+// --- Test Module ---
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -175,7 +175,7 @@ mod tests {
     #[test]
     fn ads() {
         println!("Initializing ADS1115...");
-        // ADS1115::new now returns a struct without an 'i2c' field
+
         let ads = ADS1115::new(0b0000_0011).expect("Failed to initialize ADS1115");
 
         println!("Allowing time for initial readings...");

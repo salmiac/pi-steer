@@ -26,8 +26,8 @@ Add the line `dtoverlay=pwm,pin=12,func=4`
 Save the file and reboot.
 
 ```bash
-wget https://github.com/salmiac/pi-steer/releases/download/v0.1.4/pi-steer-rust
-chmod +x pi-steer-rust-raspberry-pi-3
+wget https://github.com/salmiac/pi-steer/releases/download/v0.1.5/pi-steer-rust
+chmod +x pi-steer-rust
 ```
 Run it once and default settings file (`settings.json`) is created.
 Edit file.
@@ -40,6 +40,8 @@ To build binaries Yourself [look here](pi-steer-rust/README.md)
 ## Raspberry Pi Pico W
 
 Is used as standalone IMU. [README.md](imu-pico-w/README.md)
+
+If GPS is connected to Raspberry Pi serial port, there is just not enough IO-pins for IMU.
 
 ## Raspberry Pi pinout
 |Device|pin|Pi GPIO|Pi pin|Pi pin|Pi GPIO|pin|Device|
@@ -93,38 +95,11 @@ Wires connectedd to raspberry Pi via level converter
 
 ### Inertial masurement unit (IMU)
 
-BNO055 and BNO085 are supported. Software detects and selects witch ever is connected. BNO085 is supposed to be better than BNO055. The problem is that at the moment as I am writing this BNO085 is almost impossible to found anywhere.
-
-I have used both at 2020. Earlier I used Adafruit libraries for both.
-
-BNO055 was mostly unusable. roll was drifting very bad and heading was jumping randomly. I have written more direct messaging based on datasheet. There are still some errors which are taken care of. Roll is OK, heading drifts slightly on moving tractor. It's not good but it is usable, at least on higher GPS heading usage.
-
-The problem with BNO085 is that I2C communication is more complicated to write and I2C (at least Adafruit I2C library) is very unstable, it crashes often. Luckily there is more simple solution. When PC0 pin set high, xxxx-RCV mode is activated and BNO085 sends easy to use data at 100 Hz rate. And it seems to be stable.
-
-#### BNO055 
-
-BNO055 is connected by I2C.
-You shoud not use BNO055, the drift is just terrible. Use BNO085 instead.
-
-Wires connectedd to raspberry Pi.
-|GPIO|Pi pin number|BNO085|
-|--|--|--|
-|3v3 Power|1|VIN|
-|I2C1 SDA|3|SDA|
-|I2C1 SCL|5|SCL|
-|Ground|9|GND|
-
-https://github.com/adafruit/Adafruit_BNO055
-
-https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bno055-ds000.pdf
-
-https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
-
 #### BNO085
 
 BNO085 is connected by serial. It uses xxxx-RCV mode. 
 
-Wires connectedd to raspberry Pi.
+Wires connected to raspberry Pi.
 |GPIO|Pi pin number|BNO085|
 |--|--|--|
 |3v3 Power|1|VIN|
@@ -133,23 +108,13 @@ Wires connectedd to raspberry Pi.
 |Ground|9|GND|
 |PC0|9|GND|
 
-
 https://learn.adafruit.com/adafruit-9-dof-orientation-imu-fusion-breakout-bno085
 
 https://www.ceva-dsp.com/wp-content/uploads/2019/10/BNO080_085-Datasheet.pdf
 
+
 ## Motor controller Cytron MD13S
 https://docs.google.com/document/d/1icu1GVDxZhUn3ADSUc3JknNcmUMdPcsnJ4MhxOPRo-I/view
-
-Set hardware PWM on Raspberry Pi 3
-https://blog.oddbit.com/post/2017-09-26-some-notes-on-pwm-on-the-raspb/
-
-Now it is not fully hardware PWM. I think it uses DMA and maybe kernel code to maintain PWM, 20 kHz uses uses about 100 % of CPU. 2 kHz is used is this code.
-It is still a lot better than gpiozero fully software PWM, where maximum practical frequency is around 300 Hz.
-
-edit `/boot/config.txt`
-Add the line `dtoverlay=pwm-2chan,pin=12,func=4,pin2=13,func2=4`
-Save the file and reboot.
 
 Motor controller wiring
 |GPIO|Pi pin number|Cytron|
@@ -180,19 +145,19 @@ https://www.pololu.com/product/2485
 |||NO2||Output Down|
 
 ## Section control
-Not implemented, sorry.
 
-## Tools
-Some Python tools.
+There are 3 different modes for sections control.
+- Impulse. 'impulse' is default 3 seconds. I use it for pneumatic cylinder to controld hydraulic lever. One GPIO pin for up and one for down motion.
+- OnOff. It is just for on-off relays. I don't actually use it anywhere.
+- Reverse. This uses a pair of GPIO pins and relays to reverse the polarity of voltage, e.g. 'On' is +12 V and 'Off' is -12 V. Sprayer sections control uses this one.
 
-### sniff-aog.py
-Tool to read AgOpenGPS UDP data.
+## Sprayer control
 
-### test_ads1115.py
-Tool to test ADS1115 ADC.
+Sprayer pressure controller is separate feature from AgOpenGPS. Software on Raspberry Pi takes care of sprayer pressure reading and pressure control. One GPIO pin is also used to monitor whether boom is on locked position. Two GPIO pins (relays) are used to control pressure valve.
+There are two options for pressure control, constant pressure and speed-based variable pressure. 
 
-### test_bno085.py
-Tool to test BNO085 IMU.
+In my setup, this controller replaces controller for my Amazon sprayer.
 
-### test_cytron_pwm.py
-Test Cytron PWM motor controller (and motor).
+Other (Windows) software is used to monitor sprayer pressure and to control settings. https://github.com/salmiac/salmiac-sprayer
+Software has settings screen for nozzle spacing, nozzle size selector, litres/ha, min pressure, max pressure and nominal pressure. Nominal pressure is used for constant pressure.
+Second screeen to monitor target pressure, current pressure and speed. Buttons for controller on/off and button to select variable or constant pressure. Also indicators for min and max speed for selected pressure range, indicator for boom locker yes/no and selected nozzle size.

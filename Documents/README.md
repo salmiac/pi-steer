@@ -45,3 +45,9 @@ This design is too weak.
 Computer is a used Surface Pro 4. It is actually quite good for this purpose.
 
 ![cabin](photos/IMG_20210805_121137.jpg)
+
+## Sprayer setup
+
+![settings screen](photos/settings_screen.png)
+![monitor screen](photos/monitor_screen.png)
+

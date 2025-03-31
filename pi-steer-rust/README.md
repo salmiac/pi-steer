@@ -30,4 +30,13 @@ cargo test gps -- --nocapture
 cargo build --release
 ```
 
-Executable is `target/release/pi-steer-rust`
+Executable is `target/release/pi-steer-rust` copy it to user root directory.
+
+Set program to start at boot
+```bash
+sudo crontab -e
+```
+add line
+```bash
+@reboot pi-steer-rust &
+```
