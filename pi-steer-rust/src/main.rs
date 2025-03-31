@@ -59,7 +59,7 @@ fn main() {
     let mut adc: Option<ADS1115> = None;
     if settings.was || settings.sprayer_pressure_control {
         debug::write("Start ADC");
-        adc = Some(ADS1115::new().unwrap());
+        adc = Some(ADS1115::new((settings.was as u8) | ((settings.sprayer_pressure_control as u8) << 1)).unwrap());
     }
 
     // Init WAS
@@ -138,7 +138,7 @@ fn main() {
         
         let mut wheel_angle: f32 = 0.0;
         match was {
-            Some(ref mut w) => wheel_angle = w.angle(adc.as_mut().unwrap().read(0).unwrap()),
+            Some(ref mut w) => wheel_angle = w.angle(adc.as_mut().unwrap().voltage(0).unwrap()),
             None => (),
         }
         let mut switch_state: u8 = 0b1111_1111;
@@ -175,7 +175,7 @@ fn main() {
                 }
                 pressure_control.set_speed(*pgn_data.speed.read().unwrap());
 
-                pressure_control.current_pressure = pressure_sensor.pressure(adc.as_mut().unwrap().read(1).unwrap());
+                pressure_control.current_pressure = pressure_sensor.pressure(adc.as_mut().unwrap().voltage(1).unwrap());
                 pressure_control.update_control();
             },
             None => ()

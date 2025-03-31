@@ -413,8 +413,8 @@ impl Pgn {
             SPRAYER_BUTTONS => {
                 let mut _activated = self.pgn_data.sprayer_activated.write().unwrap();
                 let mut _constant_pressure = self.pgn_data.sprayer_constant_pressure.write().unwrap();
-                *_activated = data[0] & 1 == 1;
-                *_constant_pressure = data[0] >> 1 & 1 == 1;
+                *_activated = data[0] & 0b0000_0001 != 0;
+                *_constant_pressure = data[0] & 0b0000_0010 != 0;
                 let mut _new_sprayer_data = self.pgn_data.new_sprayer_data.write().unwrap();
                 *_new_sprayer_data = true;
             }
